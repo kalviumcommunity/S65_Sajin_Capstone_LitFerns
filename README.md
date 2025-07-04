@@ -9,6 +9,34 @@
 **Idea:**  
 LitFerns is a website for book lovers who prefer exchanging books rather than buying new ones. The platform enables individuals to list books they own and browse books they desire. Users can make swap requests, communicate with book owners, and monitor swap progress. Additional features like feedback, wishlists, and reminders simplify the book-swapping process.
 
+## How It Works
+
+1. **Users Create an Account**  
+   Readers sign up using Google OAuth or manual authentication to access the platform.
+
+2. **List Books for Swap**  
+   Users add books they own by entering details like title, author, genre, and condition.
+
+3. **Browse and Search Books**  
+   Users explore available books using filters such as genre, author, or condition.
+
+4. **Send a Swap Request**  
+   Interested users send swap requests to other users offering a book they want.
+
+5. **Chat to Finalize Swap**  
+   Users communicate via in-app chat to discuss and agree on the exchange.
+
+6. **Track Swap Status**  
+   Users can monitor each swap’s progress—Pending, Accepted, or Completed.
+
+7. **Receive Notifications**  
+   Email and in-app alerts keep users updated about new listings, swap requests, and status changes.
+
+8. **Rate and Review Swaps**  
+   After a successful exchange, users can leave ratings and reviews for their swap partners.
+
+---
+
 ### Key Features:
 - **User Roles:** Readers can list books they own and browse available books.
 - **Book Listing & Search:** Users can add book listings with details (title, author, genre, condition) and search for books by filters.
@@ -18,6 +46,29 @@ LitFerns is a website for book lovers who prefer exchanging books rather than bu
 - **Ratings & Reviews:** Users can rate and review their swap experiences.
 - **Authentication:** JWT-based authentication with Google OAuth support.
 - **Notifications:** Email and in-app alerts for swap updates and new listing matches.
+
+---
+
+## Tech Stack
+
+### **Frontend:**
+
+* React.js
+* TailwindCSS for a sleek and responsive design
+* Axios for API requests
+
+### **Backend:**
+
+* Node.js with Express.js
+* MongoDB with Mongoose for user, book listings, and swap data
+* JWT Authentication for secure user sessions
+* Socket.io for real-time in-app chat between users
+
+### **Payments & Authentication:**
+
+* Google OAuth for seamless third-party login
+* JWT-based manual authentication for standard signup/login
+* Nodemailer for email notifications about swaps and listing matches
 
 ---
 
