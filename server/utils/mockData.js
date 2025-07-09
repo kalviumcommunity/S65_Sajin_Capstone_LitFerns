@@ -1,4 +1,4 @@
-const mockBooks = [
+let mockBooks = [ 
     {
         id: '1',
         title: 'The Great Gatsby',
@@ -24,7 +24,7 @@ const mockBooks = [
         genre: 'Fiction',
         condition: 'Excellent',
         ownerId: 'user1',
-        isAvailable: false, // Example of an unavailable book
+        isAvailable: false,
     },
     {
         id: '4',
@@ -46,4 +46,4 @@ const mockBooks = [
     },
 ];
 
-module.exports = mockBooks;
+module.exports = mockBooks; 
