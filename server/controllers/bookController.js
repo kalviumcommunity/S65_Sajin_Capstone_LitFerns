@@ -36,8 +36,39 @@ const createBook = (req, res) => {
     };
 
     mockBooks.push(newBook);
-
     res.status(201).json(newBook);
 };
 
-module.exports = { getBooks, getBookById, createBook };
+// Update an existing book
+// PUT /api/books/:id
+
+const updateBook = (req, res) => {
+    const { id } = req.params; 
+    const { title, author, genre, condition, isAvailable } = req.body; 
+
+    const bookIndex = mockBooks.findIndex((book) => book.id === id);
+
+    if (bookIndex === -1) {
+        return res.status(404).json({ message: 'Book not found' });
+    }
+
+    const updatedBook = {
+        ...mockBooks[bookIndex], 
+        title: title || mockBooks[bookIndex].title, 
+        author: author || mockBooks[bookIndex].author, 
+        genre: genre || mockBooks[bookIndex].genre,
+        condition: condition || mockBooks[bookIndex].condition,
+        isAvailable: isAvailable !== undefined ? isAvailable : mockBooks[bookIndex].isAvailable,
+    };
+
+    mockBooks[bookIndex] = updatedBook;
+    res.status(200).json(updatedBook);
+};
+
+
+module.exports = {
+    getBooks,
+    getBookById,
+    createBook,
+    updateBook,
+};
