@@ -3,7 +3,8 @@ const {
     getBooks,
     getBookById,
     createBook,
-    updateBook, 
+    updateBook,
+    deleteBook 
 } = require('../controllers/bookController');
 
 const router = express.Router();
@@ -16,6 +17,7 @@ router.route('/')
 // Routes for /api/books/:id
 router.route('/:id')
     .get(getBookById)
-    .put(updateBook);
+    .put(updateBook)
+    .delete(deleteBook);
 
 module.exports = router;
