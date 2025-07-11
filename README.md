@@ -117,3 +117,5 @@ LitFerns is a website for book lovers who prefer exchanging books rather than bu
 
 ### **Buffer Days (5 days)**
 Reserved for unexpected bugs, delays, or extra features.
+
+**Deployed backend server link** : https://s65-sajin-capstone-litferns.onrender.com
