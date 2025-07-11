@@ -1,3 +1,6 @@
+## Backend Deployed Link: https://s65-sajin-capstone-litferns.onrender.com
+
+
 # Capstone Project Plan: LitFerns
 
 ## Total Duration: 50 days (including buffer days)  
