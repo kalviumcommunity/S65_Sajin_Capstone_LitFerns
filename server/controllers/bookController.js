@@ -1,4 +1,4 @@
-const mockBooks = require('../utils/mockData');
+let mockBooks = require('../utils/mockData');
 
 const getBooks = (req, res) => {
     res.status(200).json(mockBooks);
@@ -66,9 +66,23 @@ const updateBook = (req, res) => {
 };
 
 
+const deleteBook = (req, res) => {
+    const { id } = req.params;
+
+    const bookExists = mockBooks.find((book) => book.id === id);
+
+    if (!bookExists) {
+        return res.status(404).json({ message: 'Book not found' });
+    }
+
+    mockBooks = mockBooks.filter((book) => book.id !== id);
+    res.status(200).json({ message: 'Book removed successfully' });
+};
+
 module.exports = {
     getBooks,
     getBookById,
     createBook,
     updateBook,
+    deleteBook, 
 };
