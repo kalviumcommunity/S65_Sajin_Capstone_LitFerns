@@ -27,10 +27,8 @@ const getBookById = asyncHandler(async (req, res) => {
 const createBook = asyncHandler(async (req, res) => {
     const { title, author, genre, condition } = req.body;
 
-    const placeholderOwnerId = '59b99db4cfa9a34dcd7885b6';
-
     const book = await Book.create({
-        owner: placeholderOwnerId,
+        owner: req.user._id, 
         title,
         author,
         genre,
