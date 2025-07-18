@@ -1,23 +1,20 @@
 const express = require('express');
+const router = express.Router();
 const {
     getBooks,
     getBookById,
     createBook,
     updateBook,
-    deleteBook 
+    deleteBook,
 } = require('../controllers/bookController');
+const { protect } = require('../middleware/authMiddleware'); 
 
-const router = express.Router();
+// Public routes 
+router.route('/').get(getBooks);
+router.route('/:id').get(getBookById);
 
-// Routes for /api/books
-router.route('/')
-    .get(getBooks)
-    .post(createBook);
-
-// Routes for /api/books/:id
-router.route('/:id')
-    .get(getBookById)
-    .put(updateBook)
-    .delete(deleteBook);
+// Protected routes (for only logged-in users can modify books)
+router.route('/').post(protect, createBook); 
+router.route('/:id').put(protect, updateBook).delete(protect, deleteBook);
 
 module.exports = router;
