@@ -6,6 +6,12 @@ const generateToken = require('../utils/generateToken');
 // Auth user & get token (Login)
 const authUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+        res.status(400);
+        throw new Error('Please enter all fields');
+    }
+
     const user = await User.findOne({ email });
 
     if (user && (await user.matchPassword(password))) {
@@ -32,6 +38,12 @@ const authUser = asyncHandler(async (req, res) => {
 // Register a new user
 const registerUser = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+        res.status(400);
+        throw new Error('Please enter all fields');
+    }
+
     const userExists = await User.findOne({ email });
 
     if (userExists) {
