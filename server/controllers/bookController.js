@@ -5,14 +5,14 @@ const Book = require('../models/Book');
 // Get all books
 // GET /api/books
 const getBooks = asyncHandler(async (req, res) => {
-    const books = await Book.find({});
+    const books = await Book.find({}).populate('owner', 'name email');
     res.status(200).json(books);
 });
 
 // Get single book by ID
 // GET /api/books/:id
 const getBookById = asyncHandler(async (req, res) => {
-    const book = await Book.findById(req.params.id);
+    const book = await Book.findById(req.params.id).populate('owner', 'name email');
 
     if (book) {
         res.json(book);
@@ -71,10 +71,20 @@ const deleteBook = asyncHandler(async (req, res) => {
     res.status(200).json({ message: 'Book removed successfully' });
 });
 
+// Get logged-in user's books
+// GET /api/books/mybooks
+
+const getMyBooks = asyncHandler(async (req, res) => {
+    const books = await Book.find({ owner: req.user._id }); 
+    res.status(200).json(books);
+});
+
+
 module.exports = {
     getBooks,
     getBookById,
     createBook,
     updateBook,
     deleteBook,
+    getMyBooks, 
 };
