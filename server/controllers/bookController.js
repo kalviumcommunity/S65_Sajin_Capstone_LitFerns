@@ -75,7 +75,7 @@ const deleteBook = asyncHandler(async (req, res) => {
 // GET /api/books/mybooks
 
 const getMyBooks = asyncHandler(async (req, res) => {
-    const books = await Book.find({ owner: req.user._id }); 
+    const books = await Book.find({ owner: req.user._id }).populate('owner', 'name email'); 
     res.status(200).json(books);
 });
 
