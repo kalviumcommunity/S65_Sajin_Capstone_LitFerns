@@ -6,20 +6,22 @@ const {
     createBook,
     updateBook,
     deleteBook,
-    getMyBooks, 
+    getMyBooks,
 } = require('../controllers/bookController');
 const { protect } = require('../middleware/authMiddleware');
 
-// --- Public Routes ---
-router.route('/').get(getBooks);
+// Group routes for the base path '/'
+router.route('/')
+    .get(getBooks)
+    .post(protect, createBook);
 
-// --- Protected Routes ---
+// Route for a logged-in user to get their own books
 router.route('/mybooks').get(protect, getMyBooks);
 
-// --- Routes with an ID parameter ---
-router.route('/:id').get(getBookById).put(protect, updateBook).delete(protect, deleteBook);
-
-// --- The POST route can stay on the base path and is protected ---
-router.route('/').post(protect, createBook);
+// Group routes for a specific book ID '/:id'
+router.route('/:id')
+    .get(getBookById)
+    .put(protect, updateBook)
+    .delete(protect, deleteBook);
 
 module.exports = router;
