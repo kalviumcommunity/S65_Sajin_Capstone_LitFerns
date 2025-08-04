@@ -102,8 +102,16 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id);
 
     if (user) {
+        if (req.body.email) {
+            const userExists = await User.findOne({ email: req.body.email });
+            if (userExists && userExists._id.toString() !== user._id.toString()) {
+                res.status(400);
+                throw new Error('Email is already in use');
+            }
+            user.email = req.body.email;
+        }
+
         user.name = req.body.name || user.name;
-        user.email = req.body.email || user.email;
 
         if (req.body.password) {
             user.password = req.body.password;
@@ -168,7 +176,10 @@ const updateUser = asyncHandler(async (req, res) => {
     if (user) {
         user.name = req.body.name || user.name;
         user.email = req.body.email || user.email;
-        user.isAdmin = req.body.isAdmin;
+        
+        if (req.body.isAdmin !== undefined) {
+            user.isAdmin = req.body.isAdmin;
+        }
 
         const updatedUser = await user.save();
         res.json({
