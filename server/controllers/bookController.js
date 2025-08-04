@@ -25,7 +25,7 @@ const getBookById = asyncHandler(async (req, res) => {
 // Create a new book
 // POST /api/books
 const createBook = asyncHandler(async (req, res) => {
-    const { title, author, genre, condition } = req.body;
+    const { title, author, genre, condition, image } = req.body;
 
     const book = await Book.create({
         owner: req.user._id, 
@@ -33,6 +33,7 @@ const createBook = asyncHandler(async (req, res) => {
         author,
         genre,
         condition,
+        image,
     });
 
     res.status(201).json(book);
