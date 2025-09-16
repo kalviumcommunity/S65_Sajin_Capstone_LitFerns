@@ -1,8 +1,10 @@
+
 const express = require('express');
 const path = require('path');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const cookieParser = require('cookie-parser');
+const cors = require('cors');
 const bookRoutes = require('./routes/bookRoutes');
 const userRoutes = require('./routes/userRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
@@ -10,7 +12,9 @@ const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 dotenv.config();
 
+
 const app = express();
+app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
@@ -22,7 +26,7 @@ app.use('/api/books', bookRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/uploads', uploadRoutes);
 
-app.use('/server/uploads', express.static(path.join(__dirname, '/server/uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '/server/uploads')));
 
 app.use(notFound);
 app.use(errorHandler);
