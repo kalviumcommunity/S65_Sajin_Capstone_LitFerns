@@ -21,12 +21,13 @@ function checkFileType(file, cb) {
     if (extname && mimetype) {
         return cb(null, true);
     } else {
-        cb('Error: Images Only!');
+        cb(new Error('Images Only!'));
     }
 }
 
 const upload = multer({
     storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: function (req, file, cb) {
         checkFileType(file, cb);
     },
