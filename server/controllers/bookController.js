@@ -26,7 +26,11 @@ const getBookById = asyncHandler(async (req, res) => {
 // POST /api/books
 const createBook = asyncHandler(async (req, res) => {
     const { title, author, genre, condition, image } = req.body;
-
+    // ADD: Basic validation
+    if (!title || !author || !genre || !condition || !image) {
+        res.status(400);
+        throw new Error('Please fill out all fields');
+    }
     const book = await Book.create({
         owner: req.user._id, 
         title,
