@@ -91,7 +91,7 @@ const registerUser = asyncHandler(async (req, res) => {
 // Get user profile
 // GET /api/users/profile
 const getUserProfile = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id).populate('wishlist');
 
     if (user) {
         res.json({
@@ -99,6 +99,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
             name: user.name,
             email: user.email,
             isAdmin: user.isAdmin,
+            wishlist: user.wishlist,
         });
     } else {
         res.status(404);
@@ -187,8 +188,9 @@ const updateUser = asyncHandler(async (req, res) => {
         user.name = req.body.name || user.name;
         user.email = req.body.email || user.email;
         
+        // Only update isAdmin if it's explicitly passed in the body
         if (req.body.isAdmin !== undefined) {
-            user.isAdmin = req.body.isAdmin;
+          user.isAdmin = req.body.isAdmin;
         }
 
         const updatedUser = await user.save();
@@ -198,12 +200,52 @@ const updateUser = asyncHandler(async (req, res) => {
             email: updatedUser.email,
             isAdmin: updatedUser.isAdmin,
         });
-
     } else {
         res.status(404);
         throw new Error('User not found');
     }
 });
+
+// @desc    Add a book to user's wishlist
+// @route   POST /api/users/wishlist
+// @access  Private
+const addToWishlist = asyncHandler(async (req, res) => {
+    const { bookId } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (user) {
+        if (user.wishlist.includes(bookId)) {
+            res.status(400);
+            throw new Error('Book already in wishlist');
+        }
+        user.wishlist.push(bookId);
+        await user.save();
+        res.status(201).json({ message: 'Book added to wishlist' });
+    } else {
+        res.status(404);
+        throw new Error('User not found');
+    }
+});
+
+// @desc    Remove a book from user's wishlist
+// @route   DELETE /api/users/wishlist/:bookId
+// @access  Private
+const removeFromWishlist = asyncHandler(async (req, res) => {
+    const { bookId } = req.params;
+    const user = await User.findById(req.user._id);
+
+    if (user) {
+        user.wishlist.pull(bookId); // Mongoose's .pull() method removes the item from the array
+        await user.save();
+        res.json({ message: 'Book removed from wishlist' });
+    } else {
+        res.status(404);
+        throw new Error('User not found');
+    }
+});
+
+
+
 
 module.exports = {
     authUser,
@@ -215,4 +257,6 @@ module.exports = {
     getUserById,
     updateUser,
     logoutUser,
+    addToWishlist,
+    removeFromWishlist,
 };
