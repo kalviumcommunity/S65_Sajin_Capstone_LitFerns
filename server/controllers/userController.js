@@ -1,6 +1,16 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
+// Logout user - clear cookie
+const logoutUser = asyncHandler(async (req, res) => {
+    res.cookie('jwt', '', {
+        httpOnly: true,
+        expires: new Date(0),
+        sameSite: 'strict',
+        secure: process.env.NODE_ENV !== 'development',
+    });
+    res.status(200).json({ message: 'Logged out successfully' });
+});
 
 
 // Auth user & get token (Login)
@@ -204,4 +214,5 @@ module.exports = {
     deleteUser,
     getUserById,
     updateUser,
+    logoutUser,
 };
