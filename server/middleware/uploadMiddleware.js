@@ -3,13 +3,10 @@ const path = require('path');
 
 const storage = multer.diskStorage({
     destination(req, file, cb) {
-        cb(null, 'uploads/');
+        cb(null, 'server/uploads/');
     },
     filename(req, file, cb) {
-        cb(
-            null,
-            `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
-        );
+        cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
     },
 });
 
@@ -21,13 +18,13 @@ function checkFileType(file, cb) {
     if (extname && mimetype) {
         return cb(null, true);
     } else {
-        cb(new Error('Images Only!'));
+        cb(new Error('Images Only!')); // Use a proper Error object
     }
 }
 
 const upload = multer({
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: { fileSize: 5 * 1024 * 1024 }, // ADD: 5MB file size limit
     fileFilter: function (req, file, cb) {
         checkFileType(file, cb);
     },

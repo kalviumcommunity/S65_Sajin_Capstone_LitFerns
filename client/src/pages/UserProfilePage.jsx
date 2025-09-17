@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import BookCard from '../components/BookCard';
+import WishlistBookCard from '../components/WishlistBookCard';
 import { User, Edit3, LogOut, Plus, BookOpen, Heart, Upload, Loader2 } from 'lucide-react';
 
 const UserProfilePage = () => {

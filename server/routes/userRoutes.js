@@ -10,6 +10,8 @@ const {
     getUserById,
     updateUser,
     logoutUser,
+    addToWishlist,
+    removeFromWishlist,
 } = require('../controllers/userController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -20,6 +22,9 @@ router.route('/').post(registerUser).get(protect, admin, getUsers);
 router.post('/login', authUser);
 // Route for logout
 router.post('/logout', logoutUser);
+
+router.route('/wishlist').post(protect, addToWishlist);
+router.route('/wishlist/:bookId').delete(protect, removeFromWishlist);
 
 // Routes for user profile
 router.route('/profile')
