@@ -14,7 +14,20 @@ dotenv.config();
 
 
 const app = express();
-app.use(cors());
+// Allow frontend dev server and deployed site to make authenticated requests
+const allowedOrigins = [
+    'http://localhost:5173',
+    process.env.FRONTEND_URL,
+].filter(Boolean);
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+}));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -26,7 +39,8 @@ app.use('/api/books', bookRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/uploads', uploadRoutes);
 
-app.use('/uploads', express.static(path.join(__dirname, '/server/uploads')));
+// Serve uploaded images
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(notFound);
 app.use(errorHandler);
