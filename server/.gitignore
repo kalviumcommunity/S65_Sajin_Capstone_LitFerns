@@ -1,3 +1,7 @@
 node_modules/
 package-lock.json
 .env
+
+# Ignore uploaded files but keep the uploads directory structure
+uploads/*
+!uploads/.gitkeep
