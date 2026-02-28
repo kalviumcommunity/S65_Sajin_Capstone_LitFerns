@@ -1,19 +1,20 @@
-/* eslint-disable no-unused-vars */
-import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import axios from 'axios';
 import App from './App.jsx';
 
 import './index.css'; 
 
-// Ensure cookies (JWT) are sent with requests to the API
+// Configure axios defaults
+// In dev, Vite proxy handles /api → localhost:5000 so no baseURL needed
+// In prod, set VITE_API_URL to the backend URL
+if (import.meta.env.VITE_API_URL) {
+  axios.defaults.baseURL = import.meta.env.VITE_API_URL;
+}
 axios.defaults.withCredentials = true;
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
+createRoot(document.getElementById('root')).render(
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
 );

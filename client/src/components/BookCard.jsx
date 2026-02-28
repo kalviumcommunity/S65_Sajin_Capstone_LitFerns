@@ -1,58 +1,46 @@
-/* eslint-disable no-unused-vars */
-import React from 'react';
 import { Link } from 'react-router-dom';
+import { getImageUrl } from '../utils/imageUrl';
 
 const BookCard = ({ book }) => {
-  const normalize = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-    const base = import.meta.env.VITE_API_URL || '';
-    // If we have a base API URL (production), prefix it so images load from backend
-    // In local dev, leave it relative so Vite proxy serves it
-    if (base) {
-      const trimmed = url.startsWith('/') ? url : `/${url}`;
-      return `${base}${trimmed}`;
-    }
-    return url.startsWith('/') ? url : `/${url}`;
-  };
-  const imageSrc = normalize(book?.image) || normalize(book?.imageUrl) || `https://placehold.co/400x600/f8b056/ffffff?text=${(book?.title || 'Book').replace(/\s/g, '+')}`;
+  const imageSrc = getImageUrl(book?.image, book?.title || 'Book');
+  const metaLine = [book.author, book.publishedYear].filter(Boolean).join(' · ');
+
   return (
-    <div className="bg-white rounded-3xl overflow-hidden shadow-md transition-all hover:shadow-xl hover:-translate-y-1">
+    <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 group">
       <Link to={`/book/${book._id}`}>
-        <div className="relative">
+        <div className="relative overflow-hidden bg-gray-50">
           <img
             src={imageSrc}
             alt={book.title}
-            className="w-full h-64 object-cover"
+            className="w-full aspect-[2/3] object-contain group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              e.target.src = getImageUrl(null, book?.title || 'Book');
+            }}
           />
-          <div className="absolute bottom-3 right-3 flex gap-2">
-            <Link to={`/book/${book._id}`} className="bg-[#2a6049] text-white font-bold px-4 py-2 rounded-full">Swap</Link>
-            {!book.isMine && (
-              <button onClick={(e) => {
-                e.preventDefault();
-                try {
-                  const raw = localStorage.getItem('wishlist');
-                  const list = raw ? JSON.parse(raw) : [];
-                  if (!list.find((b) => b._id === book._id)) {
-                    list.push({ _id: book._id, title: book.title, author: book.author, genre: book.genre, image: book.image || book.imageUrl });
-                    localStorage.setItem('wishlist', JSON.stringify(list));
-                  }
-                } catch (_) {}
-              }} className="bg-[#f8b056] text-[#2a6049] font-bold px-4 py-2 rounded-full">Wishlist</button>
-            )}
-          </div>
+          {book.isAvailable === false && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <span className="bg-white/90 text-gray-800 text-xs font-bold px-3 py-1 rounded-full">Unavailable</span>
+            </div>
+          )}
         </div>
-        <div className="p-5">
-          <h3 className="text-xl font-black text-gray-800 truncate" style={{ fontFamily: 'Poppins, sans-serif' }}>
+        <div className="p-4">
+          <h3 className="text-base font-bold text-gray-800 truncate mb-0.5">
             {book.title}
           </h3>
-          <p className="text-sm text-gray-500 mb-2">{book.author}</p>
-          <div className="flex justify-between items-center mt-3">
-            <p className="text-xs font-bold text-[#2a6049] bg-[#e8f0eb] px-3 py-1 rounded-full">{book.genre}</p>
+          <p className="text-sm text-gray-500 mb-3 truncate">{metaLine || book.author}</p>
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">{book.genre}</span>
             {book.condition && (
-              <span className="text-xs font-bold text-[#2a6049] bg-[#f0f8f4] px-3 py-1 rounded-full capitalize">{book.condition}</span>
+              <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">{book.condition}</span>
             )}
           </div>
+          {book.averageRating > 0 && (
+            <div className="mt-2.5 flex items-center gap-1 text-sm">
+              <span className="text-amber-500">★</span>
+              <span className="font-semibold text-gray-700">{book.averageRating.toFixed(1)}</span>
+              <span className="text-gray-400 text-xs">({book.ratingsCount || 0})</span>
+            </div>
+          )}
         </div>
       </Link>
     </div>

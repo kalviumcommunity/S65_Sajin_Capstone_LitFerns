@@ -5,7 +5,12 @@ const User = require('../models/User');
 const protect = asyncHandler(async (req, res, next) => {
     let token;
 
-    token = req.cookies.jwt;
+    // Check for token in cookies first, then in Authorization header
+    if (req.cookies && req.cookies.jwt) {
+        token = req.cookies.jwt;
+    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+        token = req.headers.authorization.slice(7);
+    }
 
     if (token) {
         try {
@@ -14,9 +19,9 @@ const protect = asyncHandler(async (req, res, next) => {
             req.user = await User.findById(decoded.id).select('-password');
             
             if (!req.user) {
-            res.status(401);
-            throw new Error('Not authorized, user not found');
-        }
+                res.status(401);
+                throw new Error('Not authorized, user not found');
+            }
             next();
         } catch (error) {
             console.error(error);
