@@ -6,8 +6,8 @@ const logoutUser = asyncHandler(async (req, res) => {
     res.cookie('jwt', '', {
         httpOnly: true,
         expires: new Date(0),
-        sameSite: 'strict',
-        secure: process.env.NODE_ENV !== 'development',
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
     });
     res.status(200).json({ message: 'Logged out successfully' });
 });
@@ -29,9 +29,9 @@ const authUser = asyncHandler(async (req, res) => {
 
         res.cookie('jwt', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV !== 'development',
-            sameSite: 'strict',
-            maxAge: 30 * 24 * 60 * 60 * 1000, 
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000, 
         });
 
         res.json({
@@ -72,9 +72,9 @@ const registerUser = asyncHandler(async (req, res) => {
 
         res.cookie('jwt', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV !== 'development',
-            sameSite: 'strict',
-            maxAge: 30 * 24 * 60 * 60 * 1000,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
         res.status(201).json({
@@ -114,17 +114,42 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
     if (user) {
         if (req.body.email) {
-            const userExists = await User.findOne({ email: req.body.email });
+            // Trim and validate email
+            const trimmedEmail = req.body.email.trim().toLowerCase();
+            if (!trimmedEmail.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                res.status(400);
+                throw new Error('Invalid email format');
+            }
+            const userExists = await User.findOne({ email: trimmedEmail });
             if (userExists && userExists._id.toString() !== user._id.toString()) {
                 res.status(400);
                 throw new Error('Email is already in use');
             }
-            user.email = req.body.email;
+            user.email = trimmedEmail;
         }
 
-        user.name = req.body.name || user.name;
+        if (req.body.name) {
+            const trimmedName = req.body.name.trim();
+            if (trimmedName.length < 2 || trimmedName.length > 50) {
+                res.status(400);
+                throw new Error('Name must be between 2 and 50 characters');
+            }
+            user.name = trimmedName;
+        }
 
         if (req.body.password) {
+            if (!req.body.currentPassword) {
+                res.status(400);
+                throw new Error('Current password required to update password');
+            }
+            if (!(await user.matchPassword(req.body.currentPassword))) {
+                res.status(401);
+                throw new Error('Current password is incorrect');
+            }
+            if (req.body.password.length < 6) {
+                res.status(400);
+                throw new Error('New password must be at least 6 characters');
+            }
             user.password = req.body.password;
         }
 
@@ -211,6 +236,20 @@ const updateUser = asyncHandler(async (req, res) => {
 // @access  Private
 const addToWishlist = asyncHandler(async (req, res) => {
     const { bookId } = req.body;
+    
+    // Validate bookId
+    if (!bookId) {
+        res.status(400);
+        throw new Error('Book ID is required');
+    }
+    
+    const Book = require('../models/Book');
+    const book = await Book.findById(bookId);
+    if (!book) {
+        res.status(404);
+        throw new Error('Book not found');
+    }
+    
     const user = await User.findById(req.user._id);
 
     if (user) {
@@ -232,9 +271,20 @@ const addToWishlist = asyncHandler(async (req, res) => {
 // @access  Private
 const removeFromWishlist = asyncHandler(async (req, res) => {
     const { bookId } = req.params;
+    
+    // Validate bookId
+    if (!bookId) {
+        res.status(400);
+        throw new Error('Book ID is required');
+    }
+    
     const user = await User.findById(req.user._id);
 
     if (user) {
+        if (!user.wishlist.includes(bookId)) {
+            res.status(400);
+            throw new Error('Book not in wishlist');
+        }
         user.wishlist.pull(bookId); // Mongoose's .pull() method removes the item from the array
         await user.save();
         res.json({ message: 'Book removed from wishlist' });
