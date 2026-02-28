@@ -15,8 +15,8 @@ router.route('/')
     .get(getBooks)
     .post(protect, createBook);
 
-// Route for a logged-in user to get their own books
-router.route('/mybooks').get(protect, getMyBooks);
+// Route for a logged-in user to get their own books (must be before /:id route to avoid collision)
+router.get('/mybooks', protect, getMyBooks);
 
 // Group routes for a specific book ID '/:id'
 router.route('/:id')
