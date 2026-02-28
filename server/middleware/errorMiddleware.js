@@ -13,6 +13,11 @@ const notFound = (req, res, next) => {
  * It catches all errors passed to it and sends a structured JSON response.
  */
 const errorHandler = (err, req, res, next) => {
+    // Check if headers have already been sent
+    if (res.headersSent) {
+        return next(err);
+    }
+    
     const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
     res.status(statusCode);
 
