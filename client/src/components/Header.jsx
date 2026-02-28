@@ -1,107 +1,181 @@
-import { Link } from 'react-router-dom';
-import { BookOpen, User as UserIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Leaf, Menu, X, LogOut, BookOpen, RefreshCw, User, ChevronDown } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
-  return (
-    <header className="bg-gradient-to-r from-white/95 via-blue-50/95 to-purple-50/95 backdrop-blur-lg border-b border-white/20 py-4 sticky top-0 z-50 shadow-lg">
-      {/* Floating background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-10 right-1/4 w-32 h-32 bg-gradient-to-br from-blue-200/10 to-purple-200/10 rounded-full blur-2xl animate-pulse"></div>
-        <div className="absolute -top-5 left-1/3 w-24 h-24 bg-gradient-to-br from-cyan-200/10 to-blue-200/10 rounded-full blur-xl animate-pulse delay-1000"></div>
-      </div>
-      
-      <div className="container mx-auto px-6 flex justify-between items-center relative">
-        {/* Enhanced Logo */}
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl blur group-hover:blur-sm transition-all duration-300"></div>
-            <div className="relative bg-gradient-to-br from-blue-600 to-purple-600 p-2 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 transform group-hover:scale-105">
-              <BookOpen className="text-white" size={28} />
+    const { user, logout } = useAuth();
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const [scrolled, setScrolled] = useState(false);
+    const [profileOpen, setProfileOpen] = useState(false);
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    // Track scroll for glass effect
+    useEffect(() => {
+        const onScroll = () => setScrolled(window.scrollY > 10);
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
+
+    // Close profile dropdown on route change
+    useEffect(() => { setProfileOpen(false); setMobileOpen(false); }, [location.pathname]);
+
+    const handleLogout = async () => {
+        await logout();
+        setMobileOpen(false);
+        setProfileOpen(false);
+        navigate('/');
+    };
+
+    const navLinks = user
+        ? [
+            { to: '/browse', label: 'Library', icon: BookOpen },
+            { to: '/profile', label: 'My Books', icon: User },
+            { to: '/dashboard', label: 'Swaps', icon: RefreshCw },
+          ]
+        : [];
+
+    const isActive = (path) => location.pathname === path;
+
+    return (
+        <header className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/80 backdrop-blur-xl shadow-sm border-b border-gray-200/50' : 'bg-white border-b border-gray-100'}`}>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+                {/* Logo */}
+                <Link to="/" className="flex items-center gap-2.5 group" onClick={() => setMobileOpen(false)}>
+                    <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-md shadow-emerald-500/20 group-hover:shadow-emerald-500/30 group-hover:scale-105 transition-all duration-200">
+                        <Leaf className="text-white" size={18} />
+                    </div>
+                    <span className="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">LitFerns</span>
+                </Link>
+
+                {/* Desktop Nav */}
+                {navLinks.length > 0 && (
+                    <nav className="hidden md:flex items-center gap-0.5 bg-gray-100/70 rounded-xl p-1">
+                        {navLinks.map(({ to, label, icon: Icon }) => (
+                            <Link key={to} to={to}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 inline-flex items-center gap-1.5 ${
+                                    isActive(to)
+                                        ? 'bg-white text-emerald-700 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-800 hover:bg-white/50'
+                                }`}
+                            >
+                                <Icon size={15} />
+                                {label}
+                            </Link>
+                        ))}
+                    </nav>
+                )}
+
+                {/* Desktop Right */}
+                <div className="hidden md:flex items-center gap-3">
+                    {user ? (
+                        <div className="relative">
+                            <button
+                                onClick={() => setProfileOpen(!profileOpen)}
+                                className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl transition-all duration-200 ${profileOpen ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+                            >
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center ring-2 ring-white shadow-sm">
+                                    <span className="text-white text-sm font-bold">{user.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+                                </div>
+                                <span className="text-sm font-medium text-gray-700 max-w-[100px] truncate">{user.name?.split(' ')[0]}</span>
+                                <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* Dropdown */}
+                            {profileOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
+                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl border border-gray-200 shadow-xl shadow-gray-200/50 z-50 animate-fade-in overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                                            <p className="text-sm font-semibold text-gray-800 truncate">{user.name}</p>
+                                            <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                                        </div>
+                                        <div className="py-1.5">
+                                            <Link to="/profile" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition">
+                                                <User size={15} className="text-gray-400" /> My Profile
+                                            </Link>
+                                            <Link to="/dashboard" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition">
+                                                <RefreshCw size={15} className="text-gray-400" /> Swap Dashboard
+                                            </Link>
+                                        </div>
+                                        <div className="border-t border-gray-100 py-1.5">
+                                            <button onClick={handleLogout} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition w-full">
+                                                <LogOut size={15} /> Sign Out
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <Link to="/login" className="text-gray-600 hover:text-gray-900 px-4 py-2 text-sm font-medium transition">Login</Link>
+                            <Link to="/login" className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-5 py-2 rounded-xl hover:from-emerald-500 hover:to-teal-500 transition-all text-sm font-semibold shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30">
+                                Get Started
+                            </Link>
+                        </div>
+                    )}
+                </div>
+
+                {/* Mobile menu button */}
+                <button
+                    onClick={() => setMobileOpen(!mobileOpen)}
+                    className="md:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors"
+                    aria-label="Toggle menu"
+                >
+                    {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+                </button>
             </div>
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full animate-ping"></div>
-          </div>
-          <span 
-            className="text-2xl font-black bg-gradient-to-r from-blue-800 via-purple-800 to-blue-800 bg-clip-text text-transparent group-hover:from-blue-600 group-hover:via-purple-600 group-hover:to-blue-600 transition-all duration-300" 
-            style={{ fontFamily: 'Poppins, sans-serif' }}
-          >
-            LITFERNS
-          </span>
-          <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-500"></div>
-        </Link>
-        
-        {/* Enhanced Navigation */}
-        <nav className="hidden md:flex items-center gap-2">
-          {[
-            { to: '/browse', label: 'Browse' },
-            { to: '/dashboard', label: 'Swap Dashboard' },
-            { to: '/profile', label: 'Profile' }
-          ].map((item, index) => (
-            <Link 
-              key={item.to}
-              to={item.to} 
-              className="relative text-gray-700 hover:text-transparent hover:bg-gradient-to-r hover:from-blue-600 hover:to-purple-600 hover:bg-clip-text transition-all duration-300 font-medium px-4 py-2 rounded-xl hover:bg-white/50 hover:backdrop-blur-sm hover:shadow-md group"
-            >
-              <span className="relative z-10">{item.label}</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-3/4 transition-all duration-300"></div>
-            </Link>
-          ))}
-        </nav>
-        
-        {/* Enhanced Action Buttons */}
-        <div className="flex items-center gap-4">
-          {/* Login Button */}
-          <Link 
-            to="/login" 
-            className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center gap-2 px-6 py-3 rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 group overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-            <span className="relative z-10">Login</span>
-          </Link>
-          
-          {/* Profile Button */}
-          <Link 
-            to="/profile" 
-            aria-label="Profile" 
-            className="relative group"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-purple-500/30 rounded-full blur group-hover:blur-sm transition-all duration-300 scale-110"></div>
-            <div className="relative bg-gradient-to-br from-blue-600 to-purple-600 h-12 w-12 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 hover:rotate-3 border border-white/20">
-              <UserIcon size={20} />
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-              </div>
-            </div>
-          </Link>
-        </div>
-      </div>
-      
-      {/* Animated border bottom */}
-      <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-300/50 to-transparent"></div>
-      
-      <style jsx>{`
-        @keyframes shimmer {
-          0% { background-position: -1000px 0; }
-          100% { background-position: 1000px 0; }
-        }
-        
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-3px); }
-        }
-        
-        .animate-shimmer {
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-          background-size: 1000px 100%;
-          animation: shimmer 2s infinite;
-        }
-        
-        .animate-float {
-          animation: float 2s ease-in-out infinite;
-        }
-      `}</style>
-    </header>
-  );
+
+            {/* Mobile Drawer */}
+            {mobileOpen && (
+                <div className="md:hidden bg-white border-t border-gray-100 shadow-xl animate-fade-in">
+                    <nav className="px-4 py-4 space-y-1">
+                        {navLinks.map(({ to, label, icon: Icon }) => (
+                            <Link key={to} to={to} onClick={() => setMobileOpen(false)}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all ${
+                                    isActive(to)
+                                        ? 'text-emerald-700 bg-emerald-50'
+                                        : 'text-gray-700 hover:bg-gray-50'
+                                }`}
+                            >
+                                <Icon size={18} className={isActive(to) ? 'text-emerald-600' : 'text-gray-400'} />
+                                {label}
+                            </Link>
+                        ))}
+                        <div className="border-t border-gray-100 pt-4 mt-3">
+                            {user ? (
+                                <>
+                                    <div className="flex items-center gap-3 px-4 py-3 mb-2 bg-gray-50 rounded-xl">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
+                                            <span className="text-white text-sm font-bold">{user.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-gray-800 truncate">{user.name}</p>
+                                            <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={handleLogout} className="w-full px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition font-medium text-sm flex items-center gap-3">
+                                        <LogOut size={16} /> Sign Out
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="space-y-2">
+                                    <Link to="/login" onClick={() => setMobileOpen(false)} className="block text-center bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-3 rounded-xl hover:from-emerald-500 hover:to-teal-500 transition-all font-semibold text-sm shadow-md">
+                                        Get Started
+                                    </Link>
+                                    <Link to="/login" onClick={() => setMobileOpen(false)} className="block text-center border border-gray-200 text-gray-700 px-4 py-3 rounded-xl hover:bg-gray-50 transition font-medium text-sm">
+                                        Sign In
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                    </nav>
+                </div>
+            )}
+        </header>
+    );
 };
 
 export default Header;
