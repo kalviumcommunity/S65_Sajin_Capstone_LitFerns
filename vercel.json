@@ -4,7 +4,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://s65-sajin-capstone-litferns.onrender.com"
+      "destination": "https://s65-sajin-capstone-litferns.onrender.com/api/$1"
     },
     {
       "source": "/(.*)",
