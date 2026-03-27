@@ -40,10 +40,9 @@ export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePrevie
       setIsUploading(true);
       setError('');
 
-      // For now, just return a placeholder URL
-      // In production, you would upload to UploadThing here
-      const placeholderUrl = `data:image/jpeg;base64,${Math.random().toString(36)}`;
-      onUploadComplete(imageFile.name); // Pass the file name as URL for now
+      // For now, pass the data URL (preview) which is already loaded
+      // In production, you would upload to UploadThing and get a real URL
+      onUploadComplete(imagePreview);
       setImageFile(null);
       setImagePreview(null);
     } catch (err) {

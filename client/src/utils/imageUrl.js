@@ -5,9 +5,11 @@
 export const getImageUrl = (url, fallbackText = 'Book') => {
     const placeholder = `https://placehold.co/300x450/4f46e5/ffffff?text=${encodeURIComponent(fallbackText)}`;
     if (!url) return placeholder;
+    // Handle data URLs (from file picker previews)
+    if (url.startsWith('data:')) return url;
+    // Handle absolute HTTP/HTTPS URLs
     if (url.startsWith('http')) return url;
-    // In dev mode, Vite proxy handles /uploads/* -> server
-    // In production, VITE_API_URL is used
+    // Handle relative paths - use API base URL
     const base = import.meta.env.VITE_API_URL || '';
     const cleanPath = url.startsWith('/') ? url : `/${url}`;
     return `${base}${cleanPath}`;

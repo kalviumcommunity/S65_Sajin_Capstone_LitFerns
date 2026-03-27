@@ -12,7 +12,7 @@ const BookCard = ({ book }) => {
           <img
             src={imageSrc}
             alt={book.title}
-            className="w-full aspect-[2/3] object-contain group-hover:scale-105 transition-transform duration-300"
+            className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {
               e.target.src = getImageUrl(null, book?.title || 'Book');
             }}

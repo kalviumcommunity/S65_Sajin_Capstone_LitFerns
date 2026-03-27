@@ -160,7 +160,7 @@ const BookDetailsPage = () => {
                 <img
                   src={imageSrc}
                   alt={book.title}
-                  className="w-full aspect-[2/3] object-contain bg-white/5"
+                  className="w-full aspect-[2/3] object-cover bg-white/5"
                   onError={(e) => { e.target.src = getImageUrl(null, book.title); }}
                 />
               </div>
@@ -392,7 +392,7 @@ const BookDetailsPage = () => {
                       <img
                         src={getImageUrl(b.image, b.title)}
                         alt={b.title}
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => { e.target.src = getImageUrl(null, b.title); }}
                       />
                     </div>
@@ -424,7 +424,7 @@ const BookDetailsPage = () => {
                       <img
                         src={getImageUrl(b.image, b.title)}
                         alt={b.title}
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => { e.target.src = getImageUrl(null, b.title); }}
                       />
                     </div>
