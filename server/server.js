@@ -36,6 +36,9 @@ app.use(cors({
     },
     credentials: true,
 }));
+// Mount uploads BEFORE json middleware so multipart/form-data reaches UploadThing handler
+app.use('/api/uploads', uploadRoutes);
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -45,7 +48,6 @@ app.get('/', (req, res) => {
 
 app.use('/api/books', bookRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/uploads', uploadRoutes);
 app.use('/api/swaps', swapRoutes);
 
 // Serve uploaded images
