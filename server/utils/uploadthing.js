@@ -30,8 +30,7 @@ const uploadRouter = {
     }),
 };
 
-// Create the route handler
-// This should return Express middleware
+// Export the route handler for the Express app
 module.exports = createRouteHandler({
   router: uploadRouter,
 });
