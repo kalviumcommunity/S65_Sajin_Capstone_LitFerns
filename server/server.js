@@ -1,6 +1,7 @@
 
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const cookieParser = require('cookie-parser');
@@ -61,7 +62,15 @@ const PORT = process.env.PORT || 5000;
 // Creating a function to start the server
 const startServer = async () => {
     try {
-        await connectDB(); 
+        await connectDB();
+        
+        // Create uploads directory if it doesn't exist
+        const uploadsDir = path.join(__dirname, 'uploads');
+        if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+            console.log('📁 uploads directory created');
+        }
+        
         app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
         });

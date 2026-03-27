@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Upload, X } from 'lucide-react';
+import axios from 'axios';
 
 export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePreview, imageFile, setImageFile }) {
   const [isUploading, setIsUploading] = useState(false);
@@ -40,14 +41,29 @@ export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePrevie
       setIsUploading(true);
       setError('');
 
-      // For now, pass the data URL (preview) which is already loaded
-      // In production, you would upload to UploadThing and get a real URL
-      onUploadComplete(imagePreview);
+      // Upload the actual file to the backend
+      const formData = new FormData();
+      formData.append('file', imageFile);
+
+      const response = await axios.post('/api/uploads', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      // Get the URL from the response
+      const imageUrl = response.data?.url || response.data?.image || `uploads/${response.data?.filename}`;
+      
+      if (!imageUrl) {
+        throw new Error('No URL returned from server');
+      }
+
+      onUploadComplete(imageUrl);
       setImageFile(null);
       setImagePreview(null);
     } catch (err) {
       console.error('Upload error:', err);
-      setError('Upload failed. Please try again.');
+      setError(err.response?.data?.message || err.message || 'Upload failed. Please try again.');
     } finally {
       setIsUploading(false);
     }
