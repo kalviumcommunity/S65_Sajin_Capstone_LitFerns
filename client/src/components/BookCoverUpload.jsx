@@ -3,11 +3,21 @@ import { Upload, X } from 'lucide-react';
 import { useUploadThing } from '@uploadthing/react';
 
 export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePreview, imageFile, setImageFile }) {
-  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   
   // Use UploadThing's hook for direct uploads
-  const { startUpload } = useUploadThing('bookCover');
+  const { startUpload, isUploading: uploadInProgress } = useUploadThing('bookCover', {
+    onClientUploadComplete: (res) => {
+      if (res && res.length > 0) {
+        onUploadComplete(res[0].url);
+        setImageFile(null);
+        setImagePreview(null);
+      }
+    },
+    onUploadError: (error) => {
+      setError(error.message || 'Upload failed');
+    },
+  });
 
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
@@ -41,21 +51,12 @@ export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePrevie
     }
 
     try {
-      setIsUploading(true);
       setError('');
-
-      // Upload directly to UploadThing
-      const uploadedFiles = await startUpload([imageFile]);
-      
-      if (uploadedFiles && uploadedFiles.length > 0) {
-        const fileUrl = uploadedFiles[0].url;
-        onUploadComplete(fileUrl);
-      }
+      // startUpload handles the upload and calls onClientUploadComplete
+      await startUpload([imageFile]);
     } catch (err) {
       console.error('Upload error:', err);
       setError(err.message || 'Upload failed. Please try again.');
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -100,10 +101,10 @@ export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePrevie
         <button
           type="button"
           onClick={uploadCover}
-          disabled={isUploading}
+          disabled={uploadInProgress}
           className="w-full px-4 py-2.5 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition text-sm flex items-center justify-center gap-2"
         >
-          {isUploading ? (
+          {uploadInProgress ? (
             <>
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               Uploading…
