@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Upload, X } from 'lucide-react';
-import axios from 'axios';
+import { useUploadThing } from '@uploadthing/react';
 
 export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePreview, imageFile, setImageFile }) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
-
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  
+  // Use UploadThing's hook for direct uploads
+  const { startUpload } = useUploadThing('bookCover');
 
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
@@ -43,24 +44,16 @@ export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePrevie
       setIsUploading(true);
       setError('');
 
-      const formData = new FormData();
-      // UploadThing expects the field name to match the route name
-      formData.append('files', imageFile);
-
-      // Upload to your backend which will forward to UploadThing
-      const response = await axios.post(`${apiUrl}/api/uploads`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (response.data && response.data.file) {
-        const uploadedFileUrl = response.data.file.url || response.data.file.ufsUrl;
-        onUploadComplete(uploadedFileUrl);
+      // Upload directly to UploadThing
+      const uploadedFiles = await startUpload([imageFile]);
+      
+      if (uploadedFiles && uploadedFiles.length > 0) {
+        const fileUrl = uploadedFiles[0].url;
+        onUploadComplete(fileUrl);
       }
     } catch (err) {
       console.error('Upload error:', err);
-      setError(err.response?.data?.message || 'Upload failed. Please try again.');
+      setError(err.message || 'Upload failed. Please try again.');
     } finally {
       setIsUploading(false);
     }
