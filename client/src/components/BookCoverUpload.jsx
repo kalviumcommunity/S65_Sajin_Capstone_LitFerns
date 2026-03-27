@@ -4,6 +4,7 @@ import axios from 'axios';
 
 export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePreview, imageFile, setImageFile }) {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [error, setError] = useState('');
 
   const handleFileSelect = async (e) => {
@@ -23,33 +24,35 @@ export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePrevie
     }
 
     setError('');
+    setUploadSuccess(false);
     setImageFile(file);
 
     // Create preview
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result);
     reader.readAsDataURL(file);
+
+    // Auto-upload the file immediately
+    uploadImageFile(file);
   };
 
-  const uploadCover = async () => {
-    if (!imageFile) {
-      setError('Please select an image first');
-      return;
-    }
-
+  const uploadImageFile = async (fileToUpload) => {
     try {
       setIsUploading(true);
       setError('');
 
       // Upload the actual file to the backend
       const formData = new FormData();
-      formData.append('file', imageFile);
+      formData.append('file', fileToUpload);
 
+      console.log('Uploading file:', fileToUpload.name);
       const response = await axios.post('/api/uploads', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
+
+      console.log('Upload response:', response.data);
 
       // Get the URL from the response
       const imageUrl = response.data?.url || response.data?.image || `uploads/${response.data?.filename}`;
@@ -58,12 +61,14 @@ export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePrevie
         throw new Error('No URL returned from server');
       }
 
+      console.log('Image uploaded successfully:', imageUrl);
       onUploadComplete(imageUrl);
+      setUploadSuccess(true);
       setImageFile(null);
-      setImagePreview(null);
     } catch (err) {
       console.error('Upload error:', err);
       setError(err.response?.data?.message || err.message || 'Upload failed. Please try again.');
+      setUploadSuccess(false);
     } finally {
       setIsUploading(false);
     }
@@ -106,12 +111,28 @@ export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePrevie
         </div>
       )}
 
-      {imageFile && (
+      {uploadSuccess && (
+        <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2.5 flex items-center gap-2">
+          <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          <p className="text-xs text-green-600">✓ Image uploaded successfully</p>
+        </div>
+      )}
+
+      {isUploading && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5 flex items-center gap-2">
+          <div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+          <p className="text-xs text-blue-600">Uploading image...</p>
+        </div>
+      )}
+
+      {imageFile && !uploadSuccess && (
         <button
           type="button"
-          onClick={uploadCover}
+          onClick={() => uploadImageFile(imageFile)}
           disabled={isUploading}
-          className="w-full px-4 py-2.5 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition text-sm flex items-center justify-center gap-2"
+          className="w-full px-4 py-2.5 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition text-sm flex items-center justify-center gap-2"
         >
           {isUploading ? (
             <>
