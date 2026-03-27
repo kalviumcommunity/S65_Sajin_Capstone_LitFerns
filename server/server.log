@@ -1,0 +1,4 @@
+nohup: ignoring input
+[dotenv@17.0.1] injecting env (7) from .env – [tip] encrypt with dotenvx: https://dotenvx.com
+MongoDB Connected: ac-hlgm5nn-shard-00-02.o32sbyw.mongodb.net
+Server running on port 5000

@@ -1,15 +1,9 @@
-const { createUploadthing, createRouteHandler } = require('uploadthing/express');
+const { createUploadthing, createRouteHandler } =require('uploadthing/express');
 
-const f = createUploadthing({
-  errorFormatter: (err) => ({
-    message: err.message,
-    code: err.code,
-  }),
-});
+const f = createUploadthing();
 
-// Define file router configuration
+// Define file router configuration for book covers
 const uploadRouter = {
-  // Book cover file route
   bookCover: f({
     image: {
       maxFileSize: '4MB',
@@ -30,19 +24,14 @@ const uploadRouter = {
         key: data.file.key,
       };
     })
-    .onUploadError((error) => {
-      console.error('❌ Upload error:', error.message);
+    .onUploadError(async (error) => {
+      console.error('❌ Upload error:', error);
       throw error;
     }),
 };
 
-// Create the route handler using UploadThing's createRouteHandler
-// This returns Express middleware that handles the upload
-const handler = createRouteHandler({
+// Create the route handler
+// This should return Express middleware
+module.exports = createRouteHandler({
   router: uploadRouter,
-  config: {
-    logLevel: 'info',
-  },
 });
-
-module.exports = handler;
