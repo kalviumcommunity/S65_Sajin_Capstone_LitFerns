@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, BookOpen, RefreshCw, Users, ArrowRight, Leaf, Star, Shield, Globe, Heart, ChevronRight, BookMarked, ArrowUpRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
