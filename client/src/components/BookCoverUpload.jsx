@@ -118,4 +118,3 @@ export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePrevie
       )}
     </div>
   );
-}
