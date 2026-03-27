@@ -4,6 +4,7 @@ import axios from 'axios';
 import { User, Edit3, LogOut, Plus, BookOpen, Heart, Upload, X, Trash2, RefreshCw, MapPin, Clock, CheckCircle, ArrowRight, Search, Image, Tag, FileText, Bookmark, Hash, Globe, Layers, Calendar, ChevronDown, TrendingUp, Mail } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../utils/imageUrl';
+import { BookCoverUpload } from '../components/BookCoverUpload';
 
 const profileStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -86,6 +87,7 @@ const UserProfilePage = () => {
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState('');
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
@@ -123,21 +125,18 @@ const UserProfilePage = () => {
     setSubmitting(true);
     setError('');
     try {
-      let imagePath = '';
-      if (imageFile) {
-        const fd = new FormData();
-        fd.append('image', imageFile);
-        const res = await axios.post('/api/uploads', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-        imagePath = res.data?.image || '';
-      }
+      // Use the uploaded image URL from UploadThing if available
+      const imageUrl = uploadedImageUrl || '';
+      
       await axios.post('/api/books', {
         ...formData,
         tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
-        image: imagePath,
+        image: imageUrl,
       });
       setFormData({ title: '', author: '', genre: '', condition: '', description: '', publishedYear: '', format: 'Paperback', pages: '', language: 'English', location: '', tags: '' });
       setImageFile(null);
       setImagePreview(null);
+      setUploadedImageUrl('');
       setShowAddForm(false);
       setSuccessMsg('Book added successfully!');
       setTimeout(() => setSuccessMsg(''), 3000);
@@ -646,39 +645,16 @@ const UserProfilePage = () => {
             <div className="overflow-y-auto max-h-[calc(92vh-76px)] px-6 py-5">
               <form onSubmit={handleAddBook} className="space-y-6">
 
-                {/* Cover Image */}
+                {/* Cover Image - Using UploadThing */}
                 <div>
                   <p className="text-xs font-semibold text-gray-700 mb-3 flex items-center gap-1.5"><Image size={13} className="text-teal-600" /> Cover Image</p>
-                  <div className="flex items-start gap-4">
-                    <div className="w-20 h-28 rounded-lg border border-gray-200 bg-gray-50 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                      {imagePreview ? (
-                        <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
-                      ) : (
-                        <BookOpen size={20} className="text-gray-300" />
-                      )}
-                    </div>
-                    <div className="flex-1 relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] || null;
-                          setImageFile(file);
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => setImagePreview(reader.result);
-                            reader.readAsDataURL(file);
-                          } else setImagePreview(null);
-                        }}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      />
-                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-5 text-center hover:border-teal-400 hover:bg-teal-50/20 transition cursor-pointer">
-                        <Upload size={18} className="text-teal-500 mx-auto mb-2" />
-                        <p className="text-xs text-gray-600 font-medium">{imageFile ? imageFile.name : 'Click to upload'}</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">PNG, JPG — max 5MB</p>
-                      </div>
-                    </div>
-                  </div>
+                  <BookCoverUpload 
+                    onUploadComplete={setUploadedImageUrl}
+                    imagePreview={imagePreview}
+                    setImagePreview={setImagePreview}
+                    imageFile={imageFile}
+                    setImageFile={setImageFile}
+                  />
                 </div>
 
                 {/* Basic Info */}
