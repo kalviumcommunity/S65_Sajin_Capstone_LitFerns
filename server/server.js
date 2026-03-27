@@ -7,6 +7,7 @@ const cors = require('cors');
 const bookRoutes = require('./routes/bookRoutes');
 const userRoutes = require('./routes/userRoutes');
 const swapRoutes = require('./routes/swapRoutes');
+const uploadRoutes = require('./utils/uploadthing');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 dotenv.config();
@@ -41,6 +42,9 @@ app.use(cookieParser());
 app.get('/', (req, res) => {
     res.send('LitFerns API is running...');
 });
+
+// Mount UploadThing handler at /api/uploadthing
+app.use('/api/uploadthing', uploadRoutes);
 
 app.use('/api/books', bookRoutes);
 app.use('/api/users', userRoutes);
