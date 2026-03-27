@@ -129,7 +129,7 @@ export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePrevie
       {imageFile && !uploadSuccess && (
         <button
           type="button"
-          onClick={() => uploadImageFile(imageFile)}
+          onClick={() => uploadToUploadThing(imageFile)}
           disabled={isUploading}
           className="w-full px-4 py-2.5 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition text-sm flex items-center justify-center gap-2"
         >
