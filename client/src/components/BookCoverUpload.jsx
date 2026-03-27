@@ -44,8 +44,8 @@ export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePrevie
       setError('');
 
       const formData = new FormData();
-      formData.append('file', imageFile);
-      formData.append('route', 'bookCover');
+      // UploadThing expects the field name to match the route name
+      formData.append('files', imageFile);
 
       // Upload to your backend which will forward to UploadThing
       const response = await axios.post(`${apiUrl}/api/uploads`, formData, {
