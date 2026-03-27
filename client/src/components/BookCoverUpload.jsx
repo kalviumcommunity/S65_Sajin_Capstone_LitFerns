@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Upload, X } from 'lucide-react';
-import axios from 'axios';
+import { useUploadThing } from '../utils/uploadthing';
 
 export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePreview, imageFile, setImageFile }) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [error, setError] = useState('');
+  const { startUpload } = useUploadThing('bookCover');
 
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
@@ -32,42 +33,40 @@ export function BookCoverUpload({ onUploadComplete, imagePreview, setImagePrevie
     reader.onloadend = () => setImagePreview(reader.result);
     reader.readAsDataURL(file);
 
-    // Auto-upload the file immediately
-    uploadImageFile(file);
+    // Auto-upload to UploadThing
+    uploadToUploadThing(file);
   };
 
-  const uploadImageFile = async (fileToUpload) => {
+  const uploadToUploadThing = async (fileToUpload) => {
     try {
       setIsUploading(true);
       setError('');
 
-      // Upload the actual file to the backend
-      const formData = new FormData();
-      formData.append('file', fileToUpload);
+      console.log('Uploading to UploadThing:', fileToUpload.name);
 
-      console.log('Uploading file:', fileToUpload.name);
-      const response = await axios.post('/api/uploads', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      // Use UploadThing's startUpload to upload directly to their CDN
+      const result = await startUpload([fileToUpload]);
 
-      console.log('Upload response:', response.data);
+      console.log('UploadThing response:', result);
 
-      // Get the URL from the response
-      const imageUrl = response.data?.url || response.data?.image || `uploads/${response.data?.filename}`;
-      
-      if (!imageUrl) {
-        throw new Error('No URL returned from server');
+      if (!result || result.length === 0) {
+        throw new Error('No file uploaded');
       }
 
-      console.log('Image uploaded successfully:', imageUrl);
+      const uploadedFile = result[0];
+      const imageUrl = uploadedFile.url || uploadedFile.fileUrl;
+
+      if (!imageUrl) {
+        throw new Error('No URL returned from UploadThing');
+      }
+
+      console.log('✅ Image uploaded to UploadThing:', imageUrl);
       onUploadComplete(imageUrl);
       setUploadSuccess(true);
       setImageFile(null);
     } catch (err) {
-      console.error('Upload error:', err);
-      setError(err.response?.data?.message || err.message || 'Upload failed. Please try again.');
+      console.error('❌ UploadThing error:', err);
+      setError(err.message || 'Upload failed. Please try again.');
       setUploadSuccess(false);
     } finally {
       setIsUploading(false);

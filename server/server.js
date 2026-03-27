@@ -1,14 +1,11 @@
 
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const bookRoutes = require('./routes/bookRoutes');
 const userRoutes = require('./routes/userRoutes');
-const uploadRoutes = require('./routes/uploadRoutes');
 const swapRoutes = require('./routes/swapRoutes');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
@@ -37,8 +34,6 @@ app.use(cors({
     },
     credentials: true,
 }));
-// Mount uploads BEFORE json middleware so multipart/form-data reaches UploadThing handler
-app.use('/api/uploads', uploadRoutes);
 
 app.use(express.json());
 app.use(cookieParser());
@@ -51,9 +46,6 @@ app.use('/api/books', bookRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/swaps', swapRoutes);
 
-// Serve uploaded images
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 app.use(notFound);
 app.use(errorHandler);
 
@@ -63,13 +55,6 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
     try {
         await connectDB();
-        
-        // Create uploads directory if it doesn't exist
-        const uploadsDir = path.join(__dirname, 'uploads');
-        if (!fs.existsSync(uploadsDir)) {
-            fs.mkdirSync(uploadsDir, { recursive: true });
-            console.log('📁 uploads directory created');
-        }
         
         app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
