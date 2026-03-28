@@ -1,422 +1,480 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { RefreshCw, Inbox, CheckCircle, Clock, Package, XCircle, ArrowRight, BookOpen, AlertCircle, Search, Trash2, ArrowLeftRight, Send } from 'lucide-react';
+import { RefreshCw, Inbox, CheckCircle, Package, XCircle, ArrowLeftRight, Trash2, ArrowLeft, Book, User, Calendar, ChevronRight, X, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../utils/imageUrl';
+import { Dialog, Transition } from '@headlessui/react';
 
-const dashStyles = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
-  .dash-display { font-family: 'Playfair Display', Georgia, serif; }
-  .dash-body    { font-family: 'DM Sans', system-ui, sans-serif; }
+const dashboardStyles = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=DM+Sans:wght@300;400;500;600&display=swap');
+  .pf-serif { font-family: 'Playfair Display', Georgia, serif; }
+  .pf-sans  { font-family: 'DM Sans', system-ui, sans-serif; }
+  
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  
+  .fade-up { animation: fadeUp 0.5s cubic-bezier(.22,1,.36,1) forwards; opacity: 0; }
+  .fade-up-1 { animation-delay: 60ms; }
+  .fade-up-2 { animation-delay: 120ms; }
+  .fade-up-3 { animation-delay: 180ms; }
+  .stat-card { animation: fadeUp 0.5s cubic-bezier(.22,1,.36,1) forwards; opacity: 0; transition: all 0.3s ease; }
+  .stat-card:hover { transform: translateY(-4px); }
+  .swap-item { animation: fadeUp 0.5s ease-out forwards; opacity: 0; transition: all 0.3s ease; }
+  .swap-item:hover { transform: translateX(4px) scale(1.01); background: rgba(16, 185, 129, 0.02); }
+  .filter-btn.active { background: linear-gradient(135deg, #10b981, #14b8a6); color: white; }
+  .status-badge { font-weight: 600; min-width: 80px; text-align: center; }
 `;
 
 const statusConfig = {
-  Pending:      { bg: 'bg-amber-50',  text: 'text-amber-700',  border: 'border-amber-200',  dot: 'bg-amber-400',  label: 'Pending' },
-  Accepted:     { bg: 'bg-teal-50',   text: 'text-teal-700',   border: 'border-teal-200',   dot: 'bg-teal-500',   label: 'Accepted' },
-  Shipped:      { bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200',   dot: 'bg-blue-400',   label: 'Shipped' },
-  'In Transit': { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', dot: 'bg-violet-400', label: 'In Transit' },
-  Completed:    { bg: 'bg-gray-100',  text: 'text-gray-500',   border: 'border-gray-200',   dot: 'bg-gray-400',   label: 'Completed' },
-  Declined:     { bg: 'bg-red-50',    text: 'text-red-600',    border: 'border-red-200',    dot: 'bg-red-400',    label: 'Declined' },
-  Cancelled:    { bg: 'bg-red-50',    text: 'text-red-600',    border: 'border-red-200',    dot: 'bg-red-400',    label: 'Cancelled' },
-};
-
-const accentBar = {
-  Pending:      'bg-amber-400',
-  Accepted:     'bg-teal-500',
-  Shipped:      'bg-blue-500',
-  'In Transit': 'bg-violet-500',
-  Completed:    'bg-gray-300',
-  Declined:     'bg-red-400',
-  Cancelled:    'bg-red-400',
+  Pending:      { bg: 'bg-amber-100',  text: 'text-amber-800',  label: 'Pending',         icon: '⏳' },
+  Accepted:     { bg: 'bg-teal-100',   text: 'text-teal-800',   label: 'Accepted',        icon: '✓' },
+  Shipped:      { bg: 'bg-blue-100',   text: 'text-blue-800',   label: 'Shipped',         icon: '📦' },
+  'In Transit': { bg: 'bg-violet-100', text: 'text-violet-800', label: 'In Transit',      icon: '🚚' },
+  Completed:    { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'Completed',     icon: '✅' },
+  Declined:     { bg: 'bg-red-100',    text: 'text-red-800',    label: 'Declined',        icon: '✗' },
+  Cancelled:    { bg: 'bg-red-100',    text: 'text-red-800',    label: 'Cancelled',       icon: '✗' },
 };
 
 const StatusBadge = ({ status }) => {
   const cfg = statusConfig[status] || statusConfig.Pending;
   return (
-    <span className={`inline-flex items-center gap-1.5 ${cfg.bg} ${cfg.text} border ${cfg.border} px-2.5 py-1 rounded-md text-[10px] font-semibold tracking-wide uppercase`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} flex-shrink-0`} />
+    <span className={`status-badge inline-flex items-center gap-1.5 ${cfg.bg} ${cfg.text} px-3 py-1.5 rounded-full text-xs font-semibold`}>
+      <span>{cfg.icon}</span>
       {cfg.label}
     </span>
-  );
-};
-
-const ProgressBar = ({ percent }) => {
-  const p = Math.min(Math.max(percent || 0, 0), 100);
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ease-out ${
-            p === 100 ? 'bg-teal-500' : p >= 50 ? 'bg-blue-500' : p > 0 ? 'bg-amber-400' : 'bg-gray-200'
-          }`}
-          style={{ width: `${p}%` }}
-        />
-      </div>
-      <span className={`text-[11px] font-semibold tabular-nums w-8 text-right flex-shrink-0 ${
-        p === 100 ? 'text-teal-600' : p >= 50 ? 'text-blue-600' : p > 0 ? 'text-amber-600' : 'text-gray-300'
-      }`}>{p}%</span>
-    </div>
-  );
-};
-
-const StatCard = ({ value, label, icon: Icon, iconBg, iconColor, valueColor }) => (
-  <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex items-center gap-3.5">
-    <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center flex-shrink-0`}>
-      <Icon size={18} className={iconColor} />
-    </div>
-    <div>
-      <p className={`text-2xl font-bold leading-none ${valueColor}`}>{value}</p>
-      <p className="text-[11px] text-gray-400 mt-0.5 font-medium">{label}</p>
-    </div>
-  </div>
-);
-
-const SwapCard = ({ swap, userId, onAction, onDelete }) => {
-  const isOwner     = swap.owner?._id === userId;
-  const isRequester = swap.requester?._id === userId;
-  const otherParty  = isOwner ? swap.requester : swap.owner;
-  const book        = swap.requestedBook;
-  const offeredBook = swap.offeredBook;
-  const [actionLoading, setActionLoading] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
-  const handleAction = async (newStatus) => {
-    setActionLoading(true);
-    await onAction(swap._id, newStatus);
-    setActionLoading(false);
-  };
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:border-gray-200 hover:shadow-md transition-all duration-200">
-      <div className="flex">
-        <div className={`w-0.5 flex-shrink-0 ${accentBar[swap.status] || 'bg-gray-300'}`} />
-        <div className="flex-1 p-4 sm:p-5">
-          <div className="flex gap-4">
-            <Link to={`/book/${book?._id}`} className="flex-shrink-0 group/cover">
-              <div className="overflow-hidden rounded-lg bg-gray-50 border border-gray-100 shadow-sm" style={{ width: '3.5rem', height: '4.75rem' }}>
-                <img
-                  src={getImageUrl(book?.image, book?.title || 'Book')}
-                  alt={book?.title}
-                  className="w-full h-full object-contain group-hover/cover:scale-105 transition-transform duration-300"
-                  onError={(e) => { e.target.src = getImageUrl(null, book?.title || 'Book'); }}
-                />
-              </div>
-            </Link>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-3 mb-1">
-                <div className="min-w-0">
-                  <Link to={`/book/${book?._id}`} className="font-semibold text-gray-900 hover:text-teal-600 transition-colors text-sm leading-tight block truncate">
-                    {book?.title || 'Unknown Book'}
-                  </Link>
-                  <p className="text-xs text-gray-400 mt-0.5 truncate">{book?.author}</p>
-                </div>
-                <StatusBadge status={swap.status} />
-              </div>
-
-              <div className="mt-2 flex items-center gap-2 text-xs">
-                {isOwner ? (
-                  <span className="inline-flex items-center gap-1 text-amber-600 font-medium"><Inbox size={11} /> Incoming</span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-blue-600 font-medium"><Send size={11} /> Sent</span>
-                )}
-                <span className="text-gray-300">·</span>
-                <span className="text-gray-500">
-                  {isOwner ? 'from' : 'to'} <span className="font-medium text-gray-700">{otherParty?.name || 'someone'}</span>
-                </span>
-              </div>
-
-              {offeredBook && (
-                <div className="mt-2.5 inline-flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1.5">
-                  <ArrowLeftRight size={10} className="text-teal-500 flex-shrink-0" />
-                  <span>Offering:</span>
-                  <span className="font-medium text-gray-700 truncate max-w-[140px]">{offeredBook.title}</span>
-                </div>
-              )}
-
-              {swap.message && (
-                <p className="mt-2 text-xs text-gray-400 italic leading-relaxed line-clamp-2">"{swap.message}"</p>
-              )}
-
-              <div className="mt-3">
-                <ProgressBar percent={swap.trackingProgress} />
-              </div>
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {isOwner && swap.status === 'Pending' && (
-                  <>
-                    <button onClick={() => handleAction('Accepted')} disabled={actionLoading}
-                      className="px-3.5 py-1.5 text-xs bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                      <CheckCircle size={12} /> Accept
-                    </button>
-                    <button onClick={() => handleAction('Declined')} disabled={actionLoading}
-                      className="px-3.5 py-1.5 text-xs border border-red-200 text-red-500 rounded-lg font-semibold hover:bg-red-50 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                      <XCircle size={12} /> Decline
-                    </button>
-                  </>
-                )}
-                {swap.status === 'Accepted' && (
-                  <button onClick={() => handleAction('Shipped')} disabled={actionLoading}
-                    className="px-3.5 py-1.5 text-xs bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                    <Package size={12} /> Mark Shipped
-                  </button>
-                )}
-                {swap.status === 'Shipped' && (
-                  <button onClick={() => handleAction('In Transit')} disabled={actionLoading}
-                    className="px-3.5 py-1.5 text-xs bg-violet-600 text-white rounded-lg font-semibold hover:bg-violet-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                    <Package size={12} /> Mark In Transit
-                  </button>
-                )}
-                {swap.status === 'In Transit' && (
-                  <button onClick={() => handleAction('Completed')} disabled={actionLoading}
-                    className="px-3.5 py-1.5 text-xs bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                    <CheckCircle size={12} /> Mark Complete
-                  </button>
-                )}
-                {isRequester && swap.status === 'Pending' && (
-                  <button onClick={() => handleAction('Cancelled')} disabled={actionLoading}
-                    className="px-3.5 py-1.5 text-xs border border-gray-200 text-gray-400 rounded-lg font-semibold hover:bg-gray-50 hover:text-gray-600 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                    <XCircle size={12} /> Cancel
-                  </button>
-                )}
-                {['Accepted', 'Shipped', 'In Transit'].includes(swap.status) && (
-                  <button onClick={() => handleAction('Cancelled')} disabled={actionLoading}
-                    className="px-3.5 py-1.5 text-xs border border-gray-200 text-gray-400 rounded-lg font-semibold hover:bg-gray-50 hover:text-gray-600 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                    <XCircle size={12} /> Cancel
-                  </button>
-                )}
-                {['Completed', 'Declined', 'Cancelled'].includes(swap.status) && onDelete && (
-                  confirmDelete ? (
-                    <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5">
-                      <span className="text-xs text-red-600 font-medium">Remove?</span>
-                      <button onClick={async () => { setActionLoading(true); await onDelete(swap._id); setActionLoading(false); }}
-                        disabled={actionLoading}
-                        className="px-2.5 py-1 text-xs bg-red-600 text-white rounded-md font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors">
-                        Yes
-                      </button>
-                      <button onClick={() => setConfirmDelete(false)}
-                        className="px-2.5 py-1 text-xs text-gray-500 rounded-md font-medium hover:bg-gray-100 border border-gray-200 bg-white transition-colors">
-                        No
-                      </button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setConfirmDelete(true)}
-                      className="px-3.5 py-1.5 text-xs border border-gray-200 text-gray-400 rounded-lg font-semibold hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-colors flex items-center gap-1.5">
-                      <Trash2 size={11} /> Remove
-                    </button>
-                  )
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const EmptyState = ({ tab }) => {
-  const states = {
-    incoming:  { icon: Inbox,       iconBg: 'bg-amber-50', iconColor: 'text-amber-400', title: 'No incoming requests',  desc: 'When someone requests one of your books, it will appear here.' },
-    ongoing:   { icon: RefreshCw,   iconBg: 'bg-blue-50',  iconColor: 'text-blue-400',  title: 'No active exchanges',   desc: 'Accept a swap request to begin an exchange.' },
-    completed: { icon: CheckCircle, iconBg: 'bg-teal-50',  iconColor: 'text-teal-500',  title: 'No completed swaps',    desc: 'Your finished exchanges will be archived here.' },
-  };
-  const s = states[tab];
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-xl border border-dashed border-gray-200">
-      <div className={`w-12 h-12 ${s.iconBg} rounded-xl flex items-center justify-center mb-4`}>
-        <s.icon size={22} className={s.iconColor} />
-      </div>
-      <h3 className="text-sm font-semibold text-gray-800 mb-1">{s.title}</h3>
-      <p className="text-xs text-gray-400 mb-6 max-w-[220px] leading-relaxed">{s.desc}</p>
-      <Link to="/browse" className="inline-flex items-center gap-2 bg-[#021a0f] hover:bg-teal-900 text-white px-5 py-2 rounded-lg text-xs font-semibold transition-colors">
-        <Search size={13} /> Browse Books
-      </Link>
-    </div>
   );
 };
 
 const SwapDashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('incoming');
   const [swaps, setSwaps] = useState([]);
-  const [allSwaps, setAllSwaps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [selectedSwap, setSelectedSwap] = useState(null);
+  const [successMsg, setSuccessMsg] = useState('');
 
   const fetchSwaps = useCallback(async () => {
-    if (!user) return;
+    setLoading(true);
     try {
-      setLoading(true);
-      setError('');
-      if (activeTab === 'ongoing') {
-        const [a, s, t] = await Promise.all([
-          axios.get('/api/swaps', { params: { status: 'Accepted' } }),
-          axios.get('/api/swaps', { params: { status: 'Shipped' } }),
-          axios.get('/api/swaps', { params: { status: 'In Transit' } }),
-        ]);
-        setSwaps([...(a.data || []), ...(s.data || []), ...(t.data || [])]);
-        setLoading(false);
-        return;
-      }
-      const params = activeTab === 'incoming' ? { role: 'incoming' } : { status: 'Completed' };
-      const { data } = await axios.get('/api/swaps', { params });
+      const { data } = await axios.get('/api/swaps');
       setSwaps(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load swaps');
+      setError(err.response?.data?.message || 'Failed to load swaps.');
     } finally {
       setLoading(false);
     }
-  }, [activeTab, user]);
-
-  const loadOverview = useCallback(async () => {
-    try {
-      const { data } = await axios.get('/api/swaps');
-      setAllSwaps(Array.isArray(data) ? data : []);
-    } catch { setAllSwaps([]); }
   }, []);
 
   useEffect(() => {
-    if (!user) { navigate('/login'); return; }
-    loadOverview();
-  }, [user, navigate, loadOverview]);
+    if (!user) navigate('/login');
+    else fetchSwaps();
+  }, [user, navigate, fetchSwaps]);
 
-  useEffect(() => { if (!user) return; fetchSwaps(); }, [fetchSwaps, user]);
-
-  const handleSwapAction = async (swapId, newStatus) => {
+  const handleAction = async (swapId, newStatus) => {
     try {
       await axios.put(`/api/swaps/${swapId}`, { status: newStatus });
-      await Promise.all([fetchSwaps(), loadOverview()]);
-    } catch (err) { setError(err.response?.data?.message || 'Action failed'); }
+      setSuccessMsg(`Swap marked as ${newStatus.toLowerCase()}`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+      fetchSwaps();
+      if(selectedSwap?._id === swapId) {
+        setSelectedSwap(prev => prev ? {...prev, status: newStatus} : null);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Action failed.');
+    }
   };
 
-  const handleDeleteSwap = async (swapId) => {
+  const handleDelete = async (swapId) => {
     try {
       await axios.delete(`/api/swaps/${swapId}`);
-      setSwaps(prev => prev.filter(s => s._id !== swapId));
-      await loadOverview();
-    } catch (err) { setError(err.response?.data?.message || 'Failed to remove swap'); }
+      setSuccessMsg('Swap removed from history');
+      setTimeout(() => setSuccessMsg(''), 3000);
+      fetchSwaps();
+      setSelectedSwap(null);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete swap.');
+    }
   };
 
-  if (!user) return null;
+  const filteredSwaps = swaps
+    .filter(swap => {
+      if (filter === 'all') return true;
+      if (filter === 'incoming') return swap.owner?._id === user?._id;
+      if (filter === 'outgoing') return swap.requester?._id === user?._id;
+      return true;
+    })
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  const pendingCount    = allSwaps.filter(s => s.status === 'Pending').length;
-  const activeCount     = allSwaps.filter(s => ['Accepted', 'Shipped', 'In Transit'].includes(s.status)).length;
-  const completedCount  = allSwaps.filter(s => s.status === 'Completed').length;
-  const incomingPending = allSwaps.filter(s => s.status === 'Pending' && s.owner?._id === user._id).length;
-
-  const tabs = [
-    { key: 'incoming',  label: 'Requests',  icon: Inbox,       count: incomingPending },
-    { key: 'ongoing',   label: 'Active',    icon: RefreshCw,   count: activeCount },
-    { key: 'completed', label: 'Completed', icon: CheckCircle, count: completedCount },
-  ];
+  const stats = {
+    incoming: swaps.filter(s => s.owner?._id === user?._id && s.status === 'Pending').length,
+    active: swaps.filter(s => ['Accepted', 'Shipped', 'In Transit'].includes(s.status)).length,
+    completed: swaps.filter(s => s.status === 'Completed').length,
+  };
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] dash-body">
-      <style>{dashStyles}</style>
+    <div className="bg-[#f5f4f0] pf-sans min-h-screen">
+      <style>{dashboardStyles}</style>
 
-      {/* ── Header — deep dark, not green ── */}
-      <div className="bg-[#021a0f]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-0">
+      {/* Toast */}
+      {successMsg && (
+        <div className="fixed top-6 right-6 z-50 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-medium flex items-center gap-2.5 fade-up">
+          <CheckCircle size={14} className="text-teal-400 flex-shrink-0" />
+          {successMsg}
+        </div>
+      )}
 
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-5 h-px bg-teal-500" />
-                <p className="text-teal-500 text-[11px] font-medium tracking-[0.18em] uppercase">Dashboard</p>
-              </div>
-              <h1 className="dash-display text-3xl sm:text-4xl font-bold text-white leading-tight">
-                My <span className="italic font-normal text-teal-300">Exchanges</span>
-              </h1>
-            </div>
-            <Link to="/browse"
-              className="border border-white/15 text-white/60 hover:text-white hover:border-white/30 px-4 py-2 rounded-lg text-xs font-medium transition-colors mb-0.5 inline-flex items-center gap-2">
-              <Search size={13} /> Browse
+      {/* ── Header ── */}
+      <div className="bg-[#0d1f17]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-10">
+          
+          {/* Back + Title */}
+          <div className="flex items-center gap-4 mb-8 fade-up">
+            <Link to="/profile" className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/6 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 hover:border-white/20 transition-all">
+              <ArrowLeft size={16} />
             </Link>
+            <div>
+              <p className="text-teal-500/70 text-[10px] font-medium tracking-[0.2em] uppercase mb-1">Exchange Center</p>
+              <h1 className="pf-serif text-3xl sm:text-4xl font-light text-white leading-[1.1] tracking-tight italic">Swap Dashboard</h1>
+            </div>
           </div>
 
-          {/* Stats — each with distinct colour */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            <StatCard value={pendingCount}    label="Pending"      icon={Clock}        iconBg="bg-amber-100"  iconColor="text-amber-500"  valueColor="text-amber-600" />
-            <StatCard value={activeCount}     label="Active"       icon={RefreshCw}    iconBg="bg-blue-100"   iconColor="text-blue-500"   valueColor="text-blue-600" />
-            <StatCard value={completedCount}  label="Completed"    icon={CheckCircle}  iconBg="bg-teal-100"   iconColor="text-teal-600"   valueColor="text-teal-700" />
-            <StatCard value={incomingPending} label="Needs Action" icon={AlertCircle}  iconBg="bg-rose-100"   iconColor="text-rose-500"   valueColor="text-rose-600" />
+          {/* Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 fade-up fade-up-1">
+            {[
+              { icon: Inbox,        value: stats.incoming,   label: 'Pending Requests',  color: 'text-amber-400',    bg: 'bg-amber-500/10' },
+              { icon: RefreshCw,    value: stats.active,     label: 'Active Swaps',      color: 'text-blue-400',     bg: 'bg-blue-400/10' },
+              { icon: CheckCircle,  value: stats.completed,  label: 'Completed',         color: 'text-emerald-400',  bg: 'bg-emerald-500/10' },
+            ].map(({ icon: Icon, value, label, color, bg }) => (
+              <div key={label} className="stat-card bg-white/5 border border-white/8 rounded-xl p-4 flex items-center gap-3">
+                <div className={`w-10 h-10 ${bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                  <Icon size={18} className={color} />
+                </div>
+                <div>
+                  <p className={`text-2xl font-bold ${color} leading-none`}>{value}</p>
+                  <p className="text-[11px] text-white/30 mt-0.5 font-medium">{label}</p>
+                </div>
+              </div>
+            ))}
           </div>
+        </div>
+      </div>
 
-          {/* Tabs */}
-          <div className="flex -mb-px">
-            {tabs.map(({ key, label, icon: Icon, count }) => (
+      {/* ── Main Content ── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Filter Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 fade-up fade-up-2">
+          <h2 className="text-lg font-semibold text-gray-800">Swap History</h2>
+          <div className="flex items-center gap-1.5 bg-white/40 backdrop-blur-sm border border-gray-200/80 p-1.5 rounded-xl">
+            {[
+              { id: 'all', label: 'All',       count: swaps.length },
+              { id: 'incoming', label: 'Incoming',  count: swaps.filter(s => s.owner?._id === user?._id).length },
+              { id: 'outgoing', label: 'Outgoing',  count: swaps.filter(s => s.requester?._id === user?._id).length },
+            ].map(({ id, label, count }) => (
               <button
-                key={key}
-                onClick={() => setActiveTab(key)}
-                className={`px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold transition-all duration-150 inline-flex items-center gap-2 border-b-2 -mb-px ${
-                  activeTab === key
-                    ? 'border-teal-400 text-white'
-                    : 'border-transparent text-white/40 hover:text-white/65 hover:border-white/20'
+                key={id}
+                onClick={() => setFilter(id)}
+                className={`filter-btn px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  filter === id
+                    ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg'
+                    : 'text-gray-600 hover:text-gray-800 bg-transparent'
                 }`}
               >
-                <Icon size={13} />
-                {label}
-                {count > 0 && (
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center ${
-                    activeTab === key ? 'bg-teal-500/20 text-teal-300' : 'bg-white/8 text-white/35'
-                  }`}>{count}</span>
-                )}
+                {label} <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full ${
+                  filter === id ? 'bg-white/20' : 'bg-gray-200'
+                }`}>{count}</span>
               </button>
             ))}
           </div>
         </div>
-      </div>
 
-      {/* ── Content ── */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-
+        {/* Error */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5 flex items-center gap-3">
-            <AlertCircle size={14} className="text-red-500 flex-shrink-0" />
-            <p className="text-xs text-red-600 font-medium">{error}</p>
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-2.5 mb-6 text-xs text-red-600">
+            <X size={13} className="flex-shrink-0" />
+            {error}
           </div>
         )}
 
+        {/* Loading */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-teal-600" />
-            <p className="text-xs text-gray-400">Loading…</p>
+          <div className="flex flex-col items-center justify-center py-20 gap-3 fade-up">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-teal-500" />
+            <p className="text-sm text-gray-400">Loading swaps…</p>
           </div>
-        ) : swaps.length === 0 ? (
-          <EmptyState tab={activeTab} />
+        ) : filteredSwaps.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-200 fade-up">
+            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <Book className="text-blue-500" size={22} />
+            </div>
+            <h3 className="text-sm font-semibold text-gray-800 mb-1.5">No swaps found</h3>
+            <p className="text-xs text-gray-400 mb-6">Your swap activity will appear here</p>
+            <Link to="/browse" className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-700 text-white px-5 py-2.5 rounded-lg text-xs font-semibold transition-colors">
+              <Search size={13} />
+              Browse Books
+            </Link>
+          </div>
         ) : (
-          <div className="space-y-2.5">
-            {swaps.map((swap, i) => (
-              <SwapCard key={swap._id} swap={swap} userId={user._id} onAction={handleSwapAction} onDelete={handleDeleteSwap} index={i} />
+          <ul className="space-y-2 fade-up fade-up-2">
+            {filteredSwaps.map((swap, i) => (
+              <SwapListItem 
+                key={swap._id} 
+                swap={swap} 
+                userId={user?._id} 
+                onClick={() => setSelectedSwap(swap)}
+                style={{ animationDelay: `${i * 0.04}s` }}
+              />
             ))}
-          </div>
+          </ul>
         )}
-
-        {/* CTA */}
-        <div className="mt-12 bg-[#021a0f] rounded-xl p-7 sm:p-9 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div>
-            <h3 className="dash-display text-lg sm:text-xl font-bold text-white mb-1">
-              Ready for your next <span className="italic font-normal text-teal-300">swap?</span>
-            </h3>
-            <p className="text-white/40 text-sm">Discover books from our community and start a new exchange.</p>
-          </div>
-          <div className="flex gap-3 flex-shrink-0">
-            <Link to="/browse"
-              className="bg-white hover:bg-gray-50 text-[#021a0f] px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors inline-flex items-center gap-2">
-              <BookOpen size={15} /> Browse
-            </Link>
-            <Link to="/profile"
-              className="border border-white/20 text-white/65 hover:text-white hover:border-white/35 px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors inline-flex items-center gap-2">
-              <ArrowRight size={15} /> Add Books
-            </Link>
-          </div>
-        </div>
       </div>
+
+      {/* Modal */}
+      <SwapDetailModal isOpen={!!selectedSwap} swap={selectedSwap} userId={user?._id} onClose={() => setSelectedSwap(null)} onAction={handleAction} onDelete={handleDelete} />
     </div>
   );
 };
+
+const StatCard = ({ value, label, icon: Icon }) => (
+  <div className="bg-white rounded-lg p-4 border border-gray-200/80 shadow-sm flex items-center gap-4">
+    <div className="bg-emerald-50 text-emerald-600 p-3 rounded-lg">
+      <Icon size={20} />
+    </div>
+    <div>
+      <p className="text-2xl font-bold text-gray-800">{value}</p>
+      <p className="text-sm text-gray-500">{label}</p>
+    </div>
+  </div>
+);
+
+const FilterButton = ({ label, count, active, onClick }) => (
+  <button onClick={onClick} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+    active ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:bg-gray-200/60'
+  }`}>
+    {label} <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'}`}>{count}</span>
+  </button>
+);
+
+const SwapListItem = ({ swap, userId, onClick, style }) => {
+  const isOwner = swap.owner?._id === userId;
+  const otherParty = isOwner ? swap.requester : swap.owner;
+  const offeredBook = isOwner ? swap.requesterBook : swap.ownerBook;
+  const requestedBook = isOwner ? swap.ownerBook : swap.requesterBook;
+
+  return (
+    <li onClick={onClick} className="swap-item bg-white rounded-xl border border-gray-100 overflow-hidden cursor-pointer" style={style}>
+      <div className="flex flex-col sm:flex-row items-start gap-4 p-4 sm:p-5">
+        
+        {/* Requested Book */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="rounded-lg overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0" style={{ width: '56px', height: '76px' }}>
+            <img src={getImageUrl(requestedBook?.image, requestedBook?.title)} alt="" className="w-full h-full object-contain" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-gray-800 truncate leading-snug text-sm">{requestedBook?.title}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {isOwner ? `Requested by ${otherParty?.name}` : `Offered to ${otherParty?.name}`}
+            </p>
+          </div>
+        </div>
+
+        {/* Arrow */}
+        <div className="flex items-center justify-center px-3 text-gray-400 hidden sm:flex flex-shrink-0">
+          <ArrowLeftRight size={16} />
+        </div>
+
+        {/* Offered Book */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="rounded-lg overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0" style={{ width: '56px', height: '76px' }}>
+            <img src={getImageUrl(offeredBook?.image, offeredBook?.title)} alt="" className="w-full h-full object-contain" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-gray-800 truncate leading-snug text-sm">{offeredBook?.title}</p>
+            <p className="text-xs text-gray-500 mt-1">You offered</p>
+          </div>
+        </div>
+
+        {/* Status & Arrow */}
+        <div className="flex items-center justify-end gap-3 w-full sm:w-auto flex-shrink-0">
+          <StatusBadge status={swap.status} />
+          <ChevronRight size={16} className="text-gray-400 hidden sm:block" />
+        </div>
+      </div>
+    </li>
+  );
+};
+
+const SwapDetailModal = ({ isOpen, swap, userId, onClose, onAction, onDelete }) => {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  if (!swap) return null;
+
+  const isOwner = swap.owner?._id === userId;
+  const otherParty = isOwner ? swap.requester : swap.owner;
+  const offeredBook = isOwner ? swap.requesterBook : swap.ownerBook;
+  const requestedBook = isOwner ? swap.ownerBook : swap.requesterBook;
+
+  const handleAction = (status) => {
+    onAction(swap._id, status);
+  };
+
+  const handleDeleteClick = () => {
+    onDelete(swap._id);
+    setConfirmDelete(false);
+  };
+
+  return (
+    <Transition show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-10" onClose={onClose}>
+        <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+          <div className="fixed inset-0 bg-black bg-opacity-40" />
+        </Transition.Child>
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 text-center">
+            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+              <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white shadow-2xl transition-all">
+                
+                {/* Modal Header */}
+                <div className="bg-[#0d1f17] px-6 py-5 flex items-center justify-between">
+                  <h2 className="pf-serif text-lg font-light text-white italic tracking-tight">Swap Details</h2>
+                  <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-lg transition text-white/30 hover:text-white">
+                    <X size={15} />
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  
+                  {/* Status & Date */}
+                  <div className="flex justify-between items-center">
+                    <StatusBadge status={swap.status} />
+                    <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                      <Calendar size={13} />
+                      {new Date(swap.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+
+                  {/* Books Exchange */}
+                  <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 space-y-4 sm:space-y-0">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <BookDetail book={requestedBook} userLabel="You want" />
+                      <ArrowLeftRight size={20} className="text-teal-600 hidden sm:block flex-shrink-0" />
+                      <BookDetail book={offeredBook} userLabel="You offer" />
+                    </div>
+                  </div>
+
+                  {/* Other Party */}
+                  <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                    <h4 className="font-semibold text-gray-800 text-sm mb-2">Swap Partner</h4>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
+                        <User size={14} className="text-teal-600" />
+                      </div>
+                      <p className="text-sm text-gray-700 font-medium">{otherParty?.name}</p>
+                    </div>
+                  </div>
+
+                  {/* Message */}
+                  {swap.message && (
+                    <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                      <h4 className="font-semibold text-gray-800 text-sm mb-2">Message</h4>
+                      <p className="text-sm text-gray-600 italic">"{swap.message}"</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer - Actions */}
+                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 space-y-2.5">
+                  {isOwner && swap.status === 'Pending' && (
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => handleAction('Accepted')} 
+                        className="flex-1 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+                      >
+                        Accept Swap
+                      </button>
+                      <button 
+                        onClick={() => handleAction('Declined')} 
+                        className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  )}
+                  
+                  {['Accepted', 'Shipped', 'In Transit'].includes(swap.status) && (
+                    <button 
+                      onClick={() => handleAction(
+                        swap.status === 'Accepted' ? 'Shipped' :
+                        swap.status === 'Shipped' ? 'In Transit' : 'Completed'
+                      )} 
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Package size={16} /> 
+                      Mark as {
+                        swap.status === 'Accepted' ? 'Shipped' :
+                        swap.status === 'Shipped' ? 'In Transit' : 'Completed'
+                      }
+                    </button>
+                  )}
+                  
+                  {['Completed', 'Declined', 'Cancelled'].includes(swap.status) && !confirmDelete && (
+                    <button 
+                      onClick={() => setConfirmDelete(true)} 
+                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Trash2 size={16} /> Remove from History
+                    </button>
+                  )}
+                  
+                  {confirmDelete && (
+                    <div className="p-3.5 bg-red-50 rounded-lg border border-red-200 space-y-2.5">
+                      <p className="text-sm font-semibold text-red-800">Remove this swap from history?</p>
+                      <div className="flex gap-2.5">
+                        <button 
+                          onClick={handleDeleteClick} 
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold py-2 rounded-lg transition-colors"
+                        >
+                          Yes, Delete
+                        </button>
+                        <button 
+                          onClick={() => setConfirmDelete(false)} 
+                          className="flex-1 bg-white border border-red-200 text-red-700 text-xs font-semibold py-2 rounded-lg hover:bg-red-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <button 
+                    onClick={onClose} 
+                    className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
+        </div>
+      </Dialog>
+    </Transition>
+  );
+};
+
+const BookDetail = ({ book, userLabel }) => (
+  <div className="flex-1 text-center">
+    <div className="rounded-lg overflow-hidden bg-gray-100 border border-gray-200 mb-2 mx-auto" style={{ width: '60px', height: '80px' }}>
+      <img src={getImageUrl(book?.image, book?.title)} alt={book?.title} className="w-full h-full object-contain" />
+    </div>
+    <p className="text-xs font-semibold text-gray-800 truncate leading-tight">{book?.title}</p>
+    <p className="text-[10px] text-gray-500 mt-0.5">{userLabel}</p>
+  </div>
+);
 
 export default SwapDashboardPage;
