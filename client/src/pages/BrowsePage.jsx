@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, BookOpen, Filter, X } from 'lucide-react';
@@ -45,7 +45,7 @@ const BrowsePage = () => {
 
   const activeFilterCount = selectedGenres.length + (condition ? 1 : 0) + (format ? 1 : 0) + (availableOnly ? 1 : 0);
 
-  const fetchBooks = async (pageNum = 1) => {
+  const fetchBooks = useCallback(async (pageNum = 1) => {
     try {
       setLoading(true);
       setError('');
@@ -71,14 +71,14 @@ const BrowsePage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sort, query, selectedGenres, condition, format, availableOnly]);
 
-  useEffect(() => { fetchBooks(1); }, [selectedGenres, condition, format, availableOnly, sort]);
+  useEffect(() => { fetchBooks(1); }, [fetchBooks]);
 
   const debouncedFetch = useMemo(() => {
     let handle;
     return () => { clearTimeout(handle); handle = setTimeout(() => fetchBooks(1), 350); };
-  }, []);
+  }, [fetchBooks]);
 
   useEffect(() => { debouncedFetch(); }, [query, debouncedFetch]);
 
@@ -151,15 +151,15 @@ const BrowsePage = () => {
       </div>
 
       {/* ── Body ── */}
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Mobile filter toggle */}
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="md:hidden flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-xl px-5 py-3 text-sm font-medium text-gray-700 mb-5 w-full hover:bg-gray-50 transition-colors"
+          className="md:hidden flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-xl px-5 py-3 text-sm font-medium text-gray-700 mb-5 w-full hover:bg-gray-50 transition-colors shadow-sm"
         >
           {showFilters ? <X size={15} /> : <Filter size={15} />}
-          {showFilters ? 'Hide Filters' : 'Filters'}
+          {showFilters ? 'Hide Filters' : 'Show Filters'}
           {activeFilterCount > 0 && (
             <span className="bg-[#021a0f] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
               {activeFilterCount}
@@ -170,35 +170,35 @@ const BrowsePage = () => {
         <div className="flex flex-col md:flex-row gap-6 lg:gap-8">
 
           {/* ── Sidebar ── */}
-          <aside className={`w-full md:w-56 flex-shrink-0 ${showFilters ? 'block' : 'hidden md:block'}`}>
-            <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-5 sticky top-24">
+          <aside className={`w-full md:w-64 flex-shrink-0 ${showFilters ? 'block' : 'hidden md:block'}`}>
+            <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-6 sticky top-28 shadow-sm">
 
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <SlidersHorizontal size={14} className="text-gray-500" />
-                  <h3 className="text-sm font-semibold text-gray-900">Filters</h3>
+                  <SlidersHorizontal size={15} className="text-gray-500" />
+                  <h3 className="text-base font-semibold text-gray-900">Filters</h3>
                 </div>
                 {activeFilterCount > 0 && (
-                  <button onClick={clearAll} className="text-[11px] text-gray-400 hover:text-red-500 font-medium transition-colors">
-                    Clear
+                  <button onClick={clearAll} className="text-xs text-gray-400 hover:text-red-500 font-medium transition-colors">
+                    Clear All
                   </button>
                 )}
               </div>
 
-              <div className="h-px bg-gray-100" />
+              <div className="h-px bg-gray-100 -mx-5" />
 
               {/* Genre */}
               <div>
-                <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Genre</h4>
+                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Genre</h4>
                 <div className="flex flex-wrap gap-1.5">
                   {genres.map(g => (
                     <button
                       key={g}
                       onClick={() => toggleGenre(g)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors duration-150 ${
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors duration-150 ${
                         selectedGenres.includes(g)
-                          ? 'bg-[#021a0f] text-white'
+                          ? 'bg-[#021a0f] text-white shadow-sm'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
                       }`}
                     >
@@ -208,15 +208,13 @@ const BrowsePage = () => {
                 </div>
               </div>
 
-              <div className="h-px bg-gray-100" />
-
               {/* Condition */}
               <div>
-                <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Condition</h4>
+                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Condition</h4>
                 <select
                   value={condition}
                   onChange={(e) => setCondition(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition text-gray-700"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition text-gray-700"
                 >
                   <option value="">Any condition</option>
                   {conditions.map(c => <option key={c} value={c}>{c}</option>)}
@@ -225,11 +223,11 @@ const BrowsePage = () => {
 
               {/* Format */}
               <div>
-                <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Format</h4>
+                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Format</h4>
                 <select
                   value={format}
                   onChange={(e) => setFormat(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition text-gray-700"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition text-gray-700"
                 >
                   <option value="">Any format</option>
                   {formats.map(f => <option key={f} value={f}>{f}</option>)}
@@ -238,11 +236,11 @@ const BrowsePage = () => {
 
               {/* Sort */}
               <div>
-                <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Sort By</h4>
+                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Sort By</h4>
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition text-gray-700"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition text-gray-700"
                 >
                   <option value="newest">Newest First</option>
                   <option value="oldest">Oldest First</option>
@@ -251,10 +249,10 @@ const BrowsePage = () => {
                 </select>
               </div>
 
-              <div className="h-px bg-gray-100" />
+              <div className="h-px bg-gray-100 -mx-5" />
 
               {/* Available only */}
-              <label className="flex items-center gap-3 cursor-pointer group">
+              <label className="flex items-center gap-3 cursor-pointer group p-2 -m-2 rounded-lg hover:bg-gray-50 transition-colors">
                 <div className="relative flex-shrink-0">
                   <input
                     type="checkbox"
@@ -263,7 +261,7 @@ const BrowsePage = () => {
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
                 </div>
-                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors font-medium">Available only</span>
+                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors font-medium">Available for swap</span>
               </label>
             </div>
           </aside>
@@ -272,10 +270,10 @@ const BrowsePage = () => {
           <main className="flex-1 min-w-0">
 
             {/* Results bar */}
-            <div className="flex items-center justify-between mb-6 gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 gap-4">
               <div>
-                <h2 className="text-sm font-semibold text-gray-900">
-                  {total} book{total !== 1 ? 's' : ''} found
+                <h2 className="text-base font-semibold text-gray-900">
+                  {loading ? 'Searching...' : `${total} book${total !== 1 ? 's' : ''} found`}
                 </h2>
               </div>
               {/* Active filter chips */}
@@ -385,7 +383,7 @@ const BrowsePage = () => {
                 <button
                   onClick={() => handlePageChange(page - 1)}
                   disabled={page === 1}
-                  className="p-2.5 rounded-lg border border-gray-200 bg-white disabled:opacity-30 hover:bg-gray-50 transition-colors"
+                  className="p-2.5 rounded-lg border border-gray-200 bg-white disabled:opacity-40 hover:bg-gray-50 transition-colors"
                 >
                   <ChevronLeft size={15} className="text-gray-600" />
                 </button>
@@ -407,7 +405,7 @@ const BrowsePage = () => {
                 <button
                   onClick={() => handlePageChange(page + 1)}
                   disabled={page === pages}
-                  className="p-2.5 rounded-lg border border-gray-200 bg-white disabled:opacity-30 hover:bg-gray-50 transition-colors"
+                  className="p-2.5 rounded-lg border border-gray-200 bg-white disabled:opacity-40 hover:bg-gray-50 transition-colors"
                 >
                   <ChevronRight size={15} className="text-gray-600" />
                 </button>

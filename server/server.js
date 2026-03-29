@@ -1,19 +1,17 @@
+require('dotenv').config();
 
 const express = require('express');
-const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const bookRoutes = require('./routes/bookRoutes');
 const userRoutes = require('./routes/userRoutes');
 const swapRoutes = require('./routes/swapRoutes');
-const uploadRoutes = require('./utils/uploadthing');
+const { uploadthing } = require('./utils/uploadthing');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
-dotenv.config();
-
-
 const app = express();
+
 // CORS configuration for local and production
 const allowedOrigins = [
     'http://localhost:5173',
@@ -44,7 +42,7 @@ app.get('/', (req, res) => {
 });
 
 // Mount UploadThing handler at /api/uploadthing
-app.use('/api/uploadthing', uploadRoutes);
+app.use('/api/uploadthing', uploadthing);
 
 app.use('/api/books', bookRoutes);
 app.use('/api/users', userRoutes);

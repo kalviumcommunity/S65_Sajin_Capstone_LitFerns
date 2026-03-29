@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, BookOpen, RefreshCw, Users, ArrowRight, Leaf, Star, Shield, Globe, Heart, ChevronRight, BookMarked, ArrowUpRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -325,7 +325,7 @@ const HomePage = () => {
                       <img
                         src={getImageUrl(book.image, book.title)}
                         alt={book.title}
-                        className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500"
+                        className="w-full h-full object-contain group-hover:scale-[1.04] transition-transform duration-500"
                         onError={(e) => { e.target.src = getImageUrl(null, book.title); }}
                       />
                       {/* Shine effect */}

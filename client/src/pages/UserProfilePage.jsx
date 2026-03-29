@@ -1,58 +1,117 @@
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import {
-  User, Edit3, LogOut, Plus, BookOpen, Heart, X, Trash2,
-  RefreshCw, MapPin, CheckCircle, ArrowRight, Search, Image,
-  Tag, FileText, Bookmark, Hash, Layers, Calendar, ChevronDown,
-  Mail, Book, Star, Settings, ArrowLeft, AlertCircle, Clock
+  User, Edit3, LogOut, Plus, BookOpen, Heart, Upload, X, Trash2,
+  RefreshCw, MapPin, Clock, CheckCircle, ArrowRight, Search, Image,
+  Tag, FileText, Bookmark, Hash, Globe, Layers, Calendar, ChevronDown,
+  TrendingUp, Mail
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../utils/imageUrl';
 import { BookCoverUpload } from '../components/BookCoverUpload';
-import { Dialog, Transition } from '@headlessui/react';
 
 const profileStyles = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=DM+Sans:wght@300;400;500;600&display=swap');
-  .pf-serif { font-family: 'Playfair Display', Georgia, serif; }
-  .pf-sans  { font-family: 'DM Sans', system-ui, sans-serif; }
-  
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
-  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-  
-  .fade-up { animation: fadeUp 0.5s cubic-bezier(.22,1,.36,1) forwards; opacity: 0; }
-  .fade-up-1 { animation-delay: 60ms; }
-  .fade-up-2 { animation-delay: 120ms; }
-  .fade-up-3 { animation-delay: 180ms; }
-  .stat-card { animation: fadeUp 0.5s cubic-bezier(.22,1,.36,1) forwards; opacity: 0; }
-  .stat-card:hover { transform: translateY(-4px); }
-  .book-card { animation: fadeUp 0.5s ease-out forwards; opacity: 0; transition: all 0.3s ease; }
-  .book-card:hover { transform: translateY(-8px) scale(1.02); }
-  .avatar-glow { transition: box-shadow 0.3s ease; }
-  .avatar-glow:hover { box-shadow: 0 0 30px rgba(16, 185, 129, 0.3); }
-  .tab-pill { position: relative; }
-  .tab-pill.active::after { content: ''; position: absolute; bottom: -12px; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #10b981, #14b8a6); border-radius: 2px; }
-  .sidebar-link:hover { background: rgba(16, 185, 129, 0.05); transform: translateX(2px); }
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,400&family=Geist:wght@300;400;500;600&display=swap');
+
+  .pf-serif  { font-family: 'Fraunces', Georgia, serif; }
+  .pf-sans   { font-family: 'Geist', system-ui, sans-serif; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+
+  .fade-up { animation: fadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .fade-up-1 { animation-delay: 0.05s; }
+  .fade-up-2 { animation-delay: 0.1s; }
+  .fade-up-3 { animation-delay: 0.15s; }
+
+  .avatar-glow {
+    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0);
+    transition: box-shadow 0.3s ease;
+  }
+  .avatar-glow:hover {
+    box-shadow: 0 0 0 6px rgba(20, 184, 166, 0.15);
+  }
+
+  .tab-pill {
+    position: relative;
+    transition: color 0.2s ease;
+  }
+  .tab-pill::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0; right: 0;
+    height: 2px;
+    background: #14b8a6;
+    border-radius: 2px 2px 0 0;
+    transform: scaleX(0);
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .tab-pill.active::after { transform: scaleX(1); }
+
+  .book-card {
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  }
+  .book-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+  }
+
+  .action-btn {
+    transition: opacity 0.15s ease, background 0.15s ease;
+  }
+
+  .stat-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .stat-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+
+  .sidebar-link {
+    transition: background 0.15s ease;
+  }
+  .sidebar-link:hover { background: #f8f7f4; }
+
+  .modal-overlay {
+    backdrop-filter: blur(4px);
+  }
+
+  input, select, textarea {
+    font-family: 'Geist', system-ui, sans-serif;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
 `;
 
-const inputCls = 'w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition-all';
-const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5 tracking-wide';
+const inputCls =
+  'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent transition bg-white placeholder:text-gray-400';
 
 const swapStatusConfig = {
-  Pending:      { text: 'text-amber-700',  bg: 'bg-amber-100' },
-  Accepted:     { text: 'text-teal-700',   bg: 'bg-teal-100' },
-  Shipped:      { text: 'text-blue-700',   bg: 'bg-blue-100' },
-  'In Transit': { text: 'text-violet-700', bg: 'bg-violet-100' },
-  Completed:    { text: 'text-emerald-700',bg: 'bg-emerald-100' },
-  Declined:     { text: 'text-red-700',    bg: 'bg-red-100' },
-  Cancelled:    { text: 'text-red-700',    bg: 'bg-red-100' },
+  Pending:      { dot: 'bg-amber-400',  text: 'text-amber-700',  bg: 'bg-amber-50',  border: 'border-amber-200' },
+  Accepted:     { dot: 'bg-teal-500',   text: 'text-teal-700',   bg: 'bg-teal-50',   border: 'border-teal-200' },
+  Shipped:      { dot: 'bg-blue-400',   text: 'text-blue-700',   bg: 'bg-blue-50',   border: 'border-blue-200' },
+  'In Transit': { dot: 'bg-violet-400', text: 'text-violet-700', bg: 'bg-violet-50', border: 'border-violet-200' },
+  Completed:    { dot: 'bg-emerald-400',text: 'text-emerald-700',bg: 'bg-emerald-50',border: 'border-emerald-200' },
+  Declined:     { dot: 'bg-red-400',    text: 'text-red-600',    bg: 'bg-red-50',    border: 'border-red-200' },
+  Cancelled:    { dot: 'bg-red-400',    text: 'text-red-600',    bg: 'bg-red-50',    border: 'border-red-200' },
 };
 
 const SwapStatusBadge = ({ status }) => {
   const cfg = swapStatusConfig[status] || swapStatusConfig.Pending;
   return (
-    <span className={`inline-flex items-center gap-1.5 ${cfg.bg} ${cfg.text} px-2 py-1 rounded-full text-xs font-medium`}>
+    <span className={`inline-flex items-center gap-1.5 ${cfg.bg} ${cfg.text} border ${cfg.border} px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} flex-shrink-0`} />
       {status}
     </span>
   );
@@ -63,43 +122,54 @@ const UserProfilePage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('my-books');
   const [myBooks, setMyBooks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [wishlist, setWishlist] = useState([]);
   const [recentSwaps, setRecentSwaps] = useState([]);
-  
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingBook, setEditingBook] = useState(null);
-  const [editBookData, setEditBookData] = useState({});
-  const [editBookSaving, setEditBookSaving] = useState(false);
-  
+  const [submitting, setSubmitting] = useState(false);
+
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editSaving, setEditSaving] = useState(false);
-  
+
+  const [editingBook, setEditingBook] = useState(null);
+  const [editBookData, setEditBookData] = useState({});
+  const [editBookSaving, setEditBookSaving] = useState(false);
+
   const [deletingBookId, setDeletingBookId] = useState(null);
-  const [successMsg, setSuccessMsg] = useState('');
-  
+
   const [formData, setFormData] = useState({
-    title: '', author: '', genre: '', condition: 'Good', description: '',
+    title: '', author: '', genre: '', condition: '', description: '',
     publishedYear: '', format: 'Paperback', pages: '', language: 'English',
     location: '', tags: '',
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
-    loadMyBooks();
-    loadWishlist();
-    loadRecentSwaps();
+    const load = async () => {
+      try {
+        const { data } = await axios.get('/api/users/profile');
+        setWishlist(data?.wishlist || []);
+      } catch { /* ignore */ }
+      await loadMyBooks();
+      try {
+        const { data } = await axios.get('/api/swaps');
+        setRecentSwaps(Array.isArray(data) ? data.slice(0, 5) : []);
+      } catch { setRecentSwaps([]); }
+    };
+    load();
   }, [user, navigate]);
 
   const loadMyBooks = async () => {
     try {
+      setLoading(true);
+      setError('');
       const { data } = await axios.get('/api/books/mybooks');
       setMyBooks(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -109,41 +179,26 @@ const UserProfilePage = () => {
     }
   };
 
-  const loadWishlist = async () => {
-    try {
-      const { data } = await axios.get('/api/users/profile');
-      setWishlist(data?.wishlist || []);
-    } catch { /* silent */ }
-  };
-
-  const loadRecentSwaps = async () => {
-    try {
-      const { data } = await axios.get('/api/swaps');
-      setRecentSwaps(Array.isArray(data) ? data.slice(0, 5) : []);
-    } catch { /* silent */ }
-  };
+  const handleFormChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleAddBook = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError('');
     try {
-      const payload = {
+      const imageUrl = uploadedImageUrl || '';
+      await axios.post('/api/books', {
         ...formData,
         tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
-        image: uploadedImageUrl,
-      };
-      await axios.post('/api/books', payload);
-      setSuccessMsg('Book added!');
-      setTimeout(() => setSuccessMsg(''), 3000);
-      setShowAddForm(false);
-      setFormData({
-        title: '', author: '', genre: '', condition: 'Good', description: '',
-        publishedYear: '', format: 'Paperback', pages: '', language: 'English',
-        location: '', tags: '',
+        image: imageUrl,
       });
+      setFormData({ title: '', author: '', genre: '', condition: '', description: '', publishedYear: '', format: 'Paperback', pages: '', language: 'English', location: '', tags: '' });
+      setImageFile(null);
       setImagePreview(null);
       setUploadedImageUrl('');
+      setShowAddForm(false);
+      setSuccessMsg('Book added successfully!');
+      setTimeout(() => setSuccessMsg(''), 3000);
       await loadMyBooks();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to add book');
@@ -151,8 +206,6 @@ const UserProfilePage = () => {
       setSubmitting(false);
     }
   };
-
-  const handleFormChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleRemoveWishlist = async (bookId) => {
     try {
@@ -346,17 +399,17 @@ const UserProfilePage = () => {
       </div>
 
       {/* ── Main Content ── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <div className="grid lg:grid-cols-12 gap-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        <div className="grid lg:grid-cols-3 gap-6">
 
-          {/* Left — Content */}
-          <div className="lg:col-span-8 space-y-4 fade-up fade-up-2">
+          {/* Left — Books / Wishlist */}
+          <div className="lg:col-span-2 space-y-3 fade-up fade-up-2">
 
             {/* Toolbar */}
             {activeTab === 'my-books' && (
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-1">
                 <p className="text-xs text-gray-400 font-medium">
-                  {myBooks.length > 0 ? `You have ${myBooks.length} book${myBooks.length !== 1 ? 's' : ''} listed` : ''}
+                  {myBooks.length > 0 ? `${myBooks.length} book${myBooks.length !== 1 ? 's' : ''}` : ''}
                 </p>
                 <button
                   onClick={() => setShowAddForm(true)}
@@ -365,19 +418,6 @@ const UserProfilePage = () => {
                   <Plus size={13} />
                   Add Book
                 </button>
-              </div>
-            )}
-             {activeTab === 'wishlist' && (
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-gray-400 font-medium">
-                  {wishlist.length > 0 ? `${wishlist.length} book${wishlist.length !== 1 ? 's' : ''} in your wishlist` : ''}
-                </p>
-                 <Link to="/browse"
-                  className="h-8 px-3.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"
-                >
-                  <Search size={13} />
-                  Browse
-                </Link>
               </div>
             )}
 
@@ -571,21 +611,21 @@ const UserProfilePage = () => {
           </div>
 
           {/* ── Right Sidebar ── */}
-          <div className="lg:col-span-4 space-y-4 fade-up fade-up-3 lg:sticky lg:top-28 self-start">
+          <div className="space-y-4 fade-up fade-up-3">
 
             {/* Recent Activity */}
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
                 <h3 className="text-sm font-semibold text-gray-900">Recent Activity</h3>
-                <Link to="/swap-dashboard" className="text-xs text-teal-600 hover:text-teal-700 font-semibold flex items-center gap-1 transition-colors">
+                <Link to="/dashboard" className="text-xs text-teal-600 hover:text-teal-700 font-semibold flex items-center gap-1 transition-colors">
                   View All <ArrowRight size={11} />
                 </Link>
               </div>
 
               {recentSwaps.length === 0 ? (
                 <div className="text-center py-10 px-5">
-                  <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <RefreshCw className="text-gray-300" size={18} />
+                  <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <RefreshCw className="text-gray-200" size={16} />
                   </div>
                   <p className="text-xs text-gray-400 font-medium">No activity yet</p>
                   <p className="text-[11px] text-gray-300 mt-0.5">Start swapping to see activity</p>
@@ -631,7 +671,7 @@ const UserProfilePage = () => {
                   </div>
                   <ArrowRight size={12} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
                 </Link>
-                <Link to="/swap-dashboard" className="sidebar-link flex items-center gap-3 px-3 py-3 rounded-xl group">
+                <Link to="/dashboard" className="sidebar-link flex items-center gap-3 px-3 py-3 rounded-xl group">
                   <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
                     <RefreshCw size={14} className="text-blue-500" />
                   </div>
@@ -646,6 +686,7 @@ const UserProfilePage = () => {
           </div>
         </div>
       </div>
+
       {/* ══════════════════════════════════════
           Add Book Modal
       ══════════════════════════════════════ */}
@@ -689,6 +730,7 @@ const UserProfilePage = () => {
                     onUploadComplete={setUploadedImageUrl}
                     imagePreview={imagePreview}
                     setImagePreview={setImagePreview}
+                    imageFile={imageFile}
                     setImageFile={setImageFile}
                   />
                 </div>
@@ -703,16 +745,16 @@ const UserProfilePage = () => {
                   </div>
                   <div className="space-y-3">
                     <div>
-                      <label className={labelCls}>Title *</label>
+                      <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Title *</label>
                       <input name="title" value={formData.title} onChange={handleFormChange} className={inputCls} placeholder="Book title" required />
                     </div>
                     <div>
-                      <label className={labelCls}>Author *</label>
+                      <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Author *</label>
                       <input name="author" value={formData.author} onChange={handleFormChange} className={inputCls} placeholder="Author name" required />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className={labelCls}>Genre *</label>
+                        <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Genre *</label>
                         <div className="relative">
                           <select name="genre" value={formData.genre} onChange={handleFormChange} className={`${inputCls} appearance-none pr-8`} required>
                             <option value="">Select genre</option>
@@ -724,7 +766,7 @@ const UserProfilePage = () => {
                         </div>
                       </div>
                       <div>
-                        <label className={labelCls}>Condition *</label>
+                        <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Condition *</label>
                         <div className="flex gap-1.5 flex-wrap">
                           {['Like New', 'Good', 'Fair', 'Poor'].map(c => (
                             <button
@@ -742,7 +784,7 @@ const UserProfilePage = () => {
                       </div>
                     </div>
                     <div>
-                      <label className={labelCls}>Description *</label>
+                      <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Description *</label>
                       <textarea name="description" value={formData.description} onChange={handleFormChange} className={inputCls} placeholder="What's this book about?" rows={3} required />
                     </div>
                   </div>
@@ -762,16 +804,16 @@ const UserProfilePage = () => {
                       { label: 'Pages', name: 'pages', type: 'number', placeholder: '320' },
                     ].map(f => (
                       <div key={f.name}>
-                        <label className={labelCls}>{f.label}</label>
+                        <label className="block text-[11px] font-medium text-gray-500 mb-1.5">{f.label}</label>
                         <input name={f.name} type={f.type} value={formData[f.name]} onChange={handleFormChange} className={inputCls} placeholder={f.placeholder} />
                       </div>
                     ))}
                     <div>
-                      <label className={labelCls}>Language</label>
+                      <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Language</label>
                       <input name="language" value={formData.language} onChange={handleFormChange} className={inputCls} />
                     </div>
                     <div>
-                      <label className={labelCls}>Format</label>
+                      <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Format</label>
                       <div className="relative">
                         <select name="format" value={formData.format} onChange={handleFormChange} className={`${inputCls} appearance-none pr-8`}>
                           {['Hardcover', 'Paperback', 'Ebook', 'Audiobook', 'Other'].map(f => <option key={f}>{f}</option>)}
@@ -782,11 +824,11 @@ const UserProfilePage = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-3 mt-3">
                     <div>
-                      <label className={labelCls}>Location</label>
+                      <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Location</label>
                       <input name="location" value={formData.location} onChange={handleFormChange} className={inputCls} placeholder="City, State" />
                     </div>
                     <div>
-                      <label className={labelCls}>Tags</label>
+                      <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Tags</label>
                       <input name="tags" value={formData.tags} onChange={handleFormChange} className={inputCls} placeholder="fiction, classic…" />
                     </div>
                   </div>
@@ -846,11 +888,11 @@ const UserProfilePage = () => {
             </div>
             <form onSubmit={saveProfile} className="space-y-4">
               <div>
-                <label className={labelCls}>Name</label>
+                <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Name</label>
                 <input value={editName} onChange={e => setEditName(e.target.value)} className={inputCls} required minLength={2} />
               </div>
               <div>
-                <label className={labelCls}>Email</label>
+                <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Email</label>
                 <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} className={inputCls} required />
               </div>
               {error && <p className="text-xs text-red-500">{error}</p>}
@@ -889,7 +931,7 @@ const UserProfilePage = () => {
                 { label: 'Description', key: 'description', type: 'textarea' },
               ].map(({ label, key, type, required }) => (
                 <div key={key}>
-                  <label className={labelCls}>{label}</label>
+                  <label className="block text-[11px] font-medium text-gray-500 mb-1.5">{label}</label>
                   {type === 'textarea' ? (
                     <textarea value={editBookData[key]} onChange={e => setEditBookData({ ...editBookData, [key]: e.target.value })} className={inputCls} rows={3} />
                   ) : (
@@ -898,7 +940,7 @@ const UserProfilePage = () => {
                 </div>
               ))}
               <div>
-                <label className={labelCls}>Condition</label>
+                <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Condition</label>
                 <select value={editBookData.condition} onChange={e => setEditBookData({ ...editBookData, condition: e.target.value })} className={inputCls}>
                   {['Like New', 'Good', 'Fair', 'Poor'].map(c => <option key={c}>{c}</option>)}
                 </select>
@@ -910,19 +952,19 @@ const UserProfilePage = () => {
                   { label: 'Language', key: 'language',      type: 'text' },
                 ].map(f => (
                   <div key={f.key}>
-                    <label className={labelCls}>{f.label}</label>
+                    <label className="block text-[11px] font-medium text-gray-500 mb-1.5">{f.label}</label>
                     <input type={f.type} value={editBookData[f.key]} onChange={e => setEditBookData({ ...editBookData, [f.key]: e.target.value })} className={inputCls} />
                   </div>
                 ))}
                 <div>
-                  <label className={labelCls}>Format</label>
+                  <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Format</label>
                   <select value={editBookData.format} onChange={e => setEditBookData({ ...editBookData, format: e.target.value })} className={inputCls}>
                     {['Hardcover', 'Paperback', 'Ebook', 'Audiobook', 'Other'].map(f => <option key={f}>{f}</option>)}
                   </select>
                 </div>
               </div>
               <div>
-                <label className={labelCls}>Location</label>
+                <label className="block text-[11px] font-medium text-gray-500 mb-1.5">Location</label>
                 <input value={editBookData.location} onChange={e => setEditBookData({ ...editBookData, location: e.target.value })} className={inputCls} />
               </div>
               {error && <p className="text-xs text-red-500">{error}</p>}
