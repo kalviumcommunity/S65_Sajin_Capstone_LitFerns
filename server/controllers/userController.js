@@ -100,6 +100,10 @@ const getUserProfile = asyncHandler(async (req, res) => {
             email: user.email,
             isAdmin: user.isAdmin,
             wishlist: user.wishlist,
+            location: user.location,
+            averageRating: user.averageRating,
+            successfulSwaps: user.successfulSwaps,
+            createdAt: user.createdAt,
         });
     } else {
         res.status(404);
@@ -137,6 +141,8 @@ const updateUserProfile = asyncHandler(async (req, res) => {
             user.name = trimmedName;
         }
 
+        user.location = req.body.location || user.location;
+
         if (req.body.password) {
             if (!req.body.currentPassword) {
                 res.status(400);
@@ -160,6 +166,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
             name: updatedUser.name,
             email: updatedUser.email,
             isAdmin: updatedUser.isAdmin,
+            location: updatedUser.location,
         });
     } else {
         res.status(404);
