@@ -5,7 +5,7 @@ import {
   User, Edit3, LogOut, Plus, BookOpen, Heart, Upload, X, Trash2,
   RefreshCw, MapPin, Clock, CheckCircle, ArrowRight, Search, Image,
   Tag, FileText, Bookmark, Hash, Globe, Layers, Calendar, ChevronDown,
-  TrendingUp, Mail
+  TrendingUp, Mail, Star
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../utils/imageUrl';
@@ -321,7 +321,15 @@ const UserProfilePage = () => {
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-teal-500/70 text-[10px] font-medium tracking-[0.2em] uppercase mb-2">Your Profile</p>
+              <div className="flex items-center gap-3 mb-2">
+                <p className="text-teal-500/70 text-[10px] font-medium tracking-[0.2em] uppercase">Your Profile</p>
+                {user.averageRating > 0 && (
+                  <div className="flex items-center gap-1 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full">
+                    <Star size={10} className="text-amber-400 fill-amber-400" />
+                    <span className="text-[10px] font-bold text-amber-400">{user.averageRating.toFixed(1)}</span>
+                  </div>
+                )}
+              </div>
               <h1 className="pf-serif text-3xl sm:text-4xl font-light text-white leading-[1.1] tracking-tight mb-2">
                 {user.name?.split(' ')[0]}{' '}
                 <span className="italic text-teal-200/80">{user.name?.split(' ').slice(1).join(' ')}</span>
@@ -331,6 +339,12 @@ const UserProfilePage = () => {
                   <Mail size={11} className="text-white/20" />
                   {user.email}
                 </span>
+                {user.location && (
+                  <span className="text-white/35 text-xs flex items-center gap-1.5">
+                    <MapPin size={11} className="text-white/20" />
+                    {user.location}
+                  </span>
+                )}
                 <span className="text-white/20 text-xs flex items-center gap-1.5">
                   <Calendar size={11} className="text-white/20" />
                   Joined {new Date(user.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -357,11 +371,12 @@ const UserProfilePage = () => {
           </div>
 
           {/* Stats row */}
-          <div className="grid grid-cols-3 gap-3 mb-7 fade-up fade-up-1">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7 fade-up fade-up-1">
             {[
               { icon: BookOpen, value: myBooks.length,    label: 'Books Listed', color: 'text-teal-400',   bg: 'bg-teal-500/10' },
-              { icon: RefreshCw,value: completedSwaps,    label: 'Swaps Done',   color: 'text-blue-400',   bg: 'bg-blue-400/10' },
-              { icon: Heart,    value: wishlist.length,   label: 'Wishlist',     color: 'text-rose-400',   bg: 'bg-rose-400/10' },
+              { icon: RefreshCw,value: user.successfulSwaps || 0, label: 'Successful Swaps', color: 'text-blue-400', bg: 'bg-blue-400/10' },
+              { icon: Star,     value: user.averageRating > 0 ? user.averageRating.toFixed(1) : '—', label: 'User Rating', color: 'text-amber-400', bg: 'bg-amber-400/10' },
+              { icon: Heart,    value: wishlist.length,   label: 'Wishlist Items', color: 'text-rose-400',   bg: 'bg-rose-400/10' },
             ].map(({ icon: Icon, value, label, color, bg }) => (
               <div key={label} className="stat-card bg-white/5 border border-white/8 rounded-xl p-4 flex items-center gap-3">
                 <div className={`w-9 h-9 ${bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
@@ -632,25 +647,32 @@ const UserProfilePage = () => {
                 </div>
               ) : (
                 <div className="divide-y divide-gray-50">
-                  {recentSwaps.map(swap => (
-                    <div key={swap._id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50/60 transition-colors">
-                      <div className="rounded-lg overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0" style={{ width: '40px', height: '52px' }}>
-                        <img
-                          src={getImageUrl(swap.requestedBook?.image, swap.requestedBook?.title || 'Book')}
-                          alt=""
-                          className="w-full h-full object-contain"
-                          onError={(e) => { e.target.src = getImageUrl(null, 'Book'); }}
-                        />
+                  {recentSwaps.map(swap => {
+                    const mainBook = swap.requestedBooks?.[0];
+                    const extraCount = (swap.requestedBooks?.length || 0) - 1;
+                    return (
+                      <div key={swap._id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50/60 transition-colors">
+                        <div className="rounded-lg overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0" style={{ width: '40px', height: '52px' }}>
+                          <img
+                            src={getImageUrl(mainBook?.image, mainBook?.title || 'Book')}
+                            alt=""
+                            className="w-full h-full object-contain"
+                            onError={(e) => { e.target.src = getImageUrl(null, 'Book'); }}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-800 truncate leading-snug">
+                            {mainBook?.title || 'Unknown'}
+                            {extraCount > 0 && <span className="text-teal-500 ml-1">+{extraCount} more</span>}
+                          </p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            {swap.requester?._id === user._id ? 'You requested' : 'Incoming request'}
+                          </p>
+                        </div>
+                        <SwapStatusBadge status={swap.status} />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-800 truncate leading-snug">{swap.requestedBook?.title || 'Unknown'}</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">
-                          {swap.requester?._id === user._id ? 'You requested' : 'Incoming request'}
-                        </p>
-                      </div>
-                      <SwapStatusBadge status={swap.status} />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
