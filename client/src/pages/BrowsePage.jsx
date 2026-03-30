@@ -39,11 +39,13 @@ const BrowsePage = () => {
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [condition, setCondition] = useState('');
   const [format, setFormat] = useState('');
+  const [location, setLocation] = useState('');
+  const [minRating, setMinRating] = useState('');
   const [availableOnly, setAvailableOnly] = useState(false);
   const [sort, setSort] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
 
-  const activeFilterCount = selectedGenres.length + (condition ? 1 : 0) + (format ? 1 : 0) + (availableOnly ? 1 : 0);
+  const activeFilterCount = selectedGenres.length + (condition ? 1 : 0) + (format ? 1 : 0) + (location ? 1 : 0) + (minRating ? 1 : 0) + (availableOnly ? 1 : 0);
 
   const fetchBooks = useCallback(async (pageNum = 1) => {
     try {
@@ -54,6 +56,8 @@ const BrowsePage = () => {
       if (selectedGenres.length === 1) params.genre = selectedGenres[0];
       if (condition) params.condition = condition;
       if (format) params.format = format;
+      if (location.trim()) params.location = location.trim();
+      if (minRating) params.minRating = minRating;
       if (availableOnly) params.available = true;
 
       const { data } = await axios.get('/api/books', { params });
@@ -71,7 +75,7 @@ const BrowsePage = () => {
     } finally {
       setLoading(false);
     }
-  }, [sort, query, selectedGenres, condition, format, availableOnly]);
+  }, [sort, query, selectedGenres, condition, format, location, minRating, availableOnly]);
 
   useEffect(() => { fetchBooks(1); }, [fetchBooks]);
 
@@ -80,7 +84,7 @@ const BrowsePage = () => {
     return () => { clearTimeout(handle); handle = setTimeout(() => fetchBooks(1), 350); };
   }, [fetchBooks]);
 
-  useEffect(() => { debouncedFetch(); }, [query, debouncedFetch]);
+  useEffect(() => { debouncedFetch(); }, [query, location, debouncedFetch]);
 
   const handlePageChange = (next) => {
     const target = Math.min(Math.max(next, 1), pages);
@@ -95,6 +99,8 @@ const BrowsePage = () => {
     setSelectedGenres([]);
     setCondition('');
     setFormat('');
+    setLocation('');
+    setMinRating('');
     setAvailableOnly(false);
   };
 
@@ -221,6 +227,40 @@ const BrowsePage = () => {
                 </select>
               </div>
 
+              {/* Location */}
+              <div>
+                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Location</h4>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="City, state..."
+                    className="w-full border border-gray-200 rounded-lg pl-3 pr-8 py-2 text-sm bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition text-gray-700"
+                  />
+                  {location && (
+                    <button onClick={() => setLocation('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Min Rating */}
+              <div>
+                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Min. User Rating</h4>
+                <select
+                  value={minRating}
+                  onChange={(e) => setMinRating(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition text-gray-700"
+                >
+                  <option value="">Any rating</option>
+                  <option value="4">4+ Stars</option>
+                  <option value="4.5">4.5+ Stars</option>
+                  <option value="3">3+ Stars</option>
+                </select>
+              </div>
+
               {/* Format */}
               <div>
                 <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Format</h4>
@@ -277,7 +317,7 @@ const BrowsePage = () => {
                 </h2>
               </div>
               {/* Active filter chips */}
-              {(selectedGenres.length > 0 || condition || format) && (
+              {(selectedGenres.length > 0 || condition || format || location || minRating) && (
                 <div className="hidden md:flex items-center gap-2 flex-wrap justify-end">
                   {selectedGenres.map(g => (
                     <span key={g} className="inline-flex items-center gap-1.5 bg-[#021a0f] text-white text-[10px] font-medium px-2.5 py-1 rounded-lg">
@@ -289,6 +329,18 @@ const BrowsePage = () => {
                     <span className="inline-flex items-center gap-1.5 bg-gray-800 text-white text-[10px] font-medium px-2.5 py-1 rounded-lg">
                       {condition}
                       <button onClick={() => setCondition('')} className="hover:text-white/70"><X size={10} /></button>
+                    </span>
+                  )}
+                  {location && (
+                    <span className="inline-flex items-center gap-1.5 bg-gray-800 text-white text-[10px] font-medium px-2.5 py-1 rounded-lg">
+                      {location}
+                      <button onClick={() => setLocation('')} className="hover:text-white/70"><X size={10} /></button>
+                    </span>
+                  )}
+                  {minRating && (
+                    <span className="inline-flex items-center gap-1.5 bg-amber-600 text-white text-[10px] font-medium px-2.5 py-1 rounded-lg">
+                      {minRating}+ Stars
+                      <button onClick={() => setMinRating('')} className="hover:text-white/70"><X size={10} /></button>
                     </span>
                   )}
                   {format && (
