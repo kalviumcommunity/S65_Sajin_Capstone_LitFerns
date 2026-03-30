@@ -7,6 +7,7 @@ const {
     updateBook,
     deleteBook,
     getMyBooks,
+    getRecommendations,
 } = require('../controllers/bookController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -17,6 +18,9 @@ router.route('/')
 
 // Route for a logged-in user to get their own books (must be before /:id route to avoid collision)
 router.get('/mybooks', protect, getMyBooks);
+
+// Route for recommendations
+router.get('/recommendations', protect, getRecommendations);
 
 // Group routes for a specific book ID '/:id'
 router.route('/:id')
