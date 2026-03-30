@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Leaf, Menu, X, LogOut, BookOpen, RefreshCw, User, ChevronDown } from 'lucide-react';
+import { Leaf, Menu, X, LogOut, BookOpen, RefreshCw, User, ChevronDown, Bell, CheckCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 const headerStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@400;500;600&display=swap');
@@ -47,6 +48,24 @@ const headerStyles = `
     border: 1px solid rgba(255,255,255,0.08);
     box-shadow: 0 16px 48px rgba(0,0,0,0.3);
   }
+
+  .notif-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 4px;
+    background: #f43f5e;
+    color: white;
+    font-size: 8px;
+    font-weight: 800;
+    border-radius: 99px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #021a0f;
+  }
 `;
 
 const Header = () => {
@@ -55,8 +74,48 @@ const Header = () => {
     const [scrolled, setScrolled] = useState(false);
     const [hidden, setHidden] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
+    const [notifOpen, setNotifOpen] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
     const navigate = useNavigate();
     const location = useLocation();
+
+    const fetchNotifications = async () => {
+        if (!user) return;
+        try {
+            const { data } = await axios.get('/api/notifications');
+            setNotifications(data);
+            setUnreadCount(data.filter(n => !n.isRead).length);
+        } catch (err) {
+            console.error('Failed to fetch notifications', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchNotifications();
+        const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+        return () => clearInterval(interval);
+    }, [user]);
+
+    const handleMarkAllRead = async () => {
+        try {
+            await axios.put('/api/notifications/read-all');
+            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+            setUnreadCount(0);
+        } catch (err) {
+            console.error('Failed to mark all as read', err);
+        }
+    };
+
+    const handleMarkRead = async (id) => {
+        try {
+            await axios.put(`/api/notifications/${id}/read`);
+            setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (err) {
+            console.error('Failed to mark as read', err);
+        }
+    };
 
     useEffect(() => {
         let lastY = window.scrollY;
@@ -73,12 +132,14 @@ const Header = () => {
     useEffect(() => {
         setProfileOpen(false);
         setMobileOpen(false);
+        setNotifOpen(false);
     }, [location.pathname]);
 
     const handleLogout = async () => {
         await logout();
         setMobileOpen(false);
         setProfileOpen(false);
+        setNotifOpen(false);
         navigate('/');
     };
 
@@ -141,10 +202,73 @@ const Header = () => {
                                 {/* Divider */}
                                 <div className="w-px h-5 bg-white/15 mx-1" />
 
+                                {/* Notifications */}
+                                <div className="relative mr-1">
+                                    <button
+                                        onClick={() => { setNotifOpen(!notifOpen); setProfileOpen(false); }}
+                                        className={`w-9 h-9 flex items-center justify-center rounded-full transition-all duration-150 ${
+                                            notifOpen ? 'bg-white/20' : 'bg-white/10 hover:bg-white/18'
+                                        }`}
+                                    >
+                                        <Bell size={15} className="text-white" />
+                                        {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+                                    </button>
+
+                                    {notifOpen && (
+                                        <>
+                                            <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                                            <div className="hdr-dropdown absolute right-0 top-full mt-3 w-80 bg-white rounded-2xl border border-gray-100 shadow-2xl shadow-black/15 z-50 overflow-hidden">
+                                                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                                                    <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Notifications</h3>
+                                                    {unreadCount > 0 && (
+                                                        <button onClick={handleMarkAllRead} className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 uppercase tracking-tight">
+                                                            <CheckCheck size={11} /> Mark all read
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="max-h-[360px] overflow-y-auto divide-y divide-gray-50">
+                                                    {notifications.length === 0 ? (
+                                                        <div className="py-12 px-6 text-center">
+                                                            <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                                <Bell size={16} className="text-gray-200" />
+                                                            </div>
+                                                            <p className="text-xs text-gray-400 font-medium">No notifications yet</p>
+                                                        </div>
+                                                    ) : (
+                                                        notifications.map(n => (
+                                                            <div
+                                                                key={n._id}
+                                                                className={`px-4 py-3.5 transition-colors cursor-pointer hover:bg-gray-50/80 ${!n.isRead ? 'bg-emerald-50/20' : ''}`}
+                                                                onClick={() => {
+                                                                    if (!n.isRead) handleMarkRead(n._id);
+                                                                    if (n.relatedId) navigate(n.type === 'Message' ? '/messages' : '/dashboard');
+                                                                    setNotifOpen(false);
+                                                                }}
+                                                            >
+                                                                <div className="flex gap-3">
+                                                                    <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${!n.isRead ? 'bg-emerald-500' : 'bg-transparent'}`} />
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className={`text-xs leading-relaxed ${!n.isRead ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
+                                                                            {n.content}
+                                                                        </p>
+                                                                        <p className="text-[10px] text-gray-400 mt-1">
+                                                                            {new Date(n.createdAt).toLocaleDateString()} at {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
                                 {/* Profile button — pill inside pill */}
                                 <div className="relative">
                                     <button
-                                        onClick={() => setProfileOpen(!profileOpen)}
+                                        onClick={() => { setProfileOpen(!profileOpen); setNotifOpen(false); }}
                                         className={`flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full transition-all duration-150 ${
                                             profileOpen ? 'bg-white/20' : 'bg-white/10 hover:bg-white/18 border border-white/15'
                                         }`}
@@ -221,12 +345,20 @@ const Header = () => {
                             <span className="hdr-display text-[15px] font-bold text-white tracking-tight">LitFerns</span>
                         </Link>
 
-                        <button
-                            onClick={() => setMobileOpen(!mobileOpen)}
-                            className="w-8 h-8 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
-                        >
-                            {mobileOpen ? <X size={16} /> : <Menu size={16} />}
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {user && (
+                                <Link to="/dashboard" className="relative w-8 h-8 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white">
+                                    <Bell size={14} />
+                                    {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+                                </Link>
+                            )}
+                            <button
+                                onClick={() => setMobileOpen(!mobileOpen)}
+                                className="w-8 h-8 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+                            >
+                                {mobileOpen ? <X size={16} /> : <Menu size={16} />}
+                            </button>
+                        </div>
                     </div>
 
                     {/* ── Mobile Drawer ── */}
