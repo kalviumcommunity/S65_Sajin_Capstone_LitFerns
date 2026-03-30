@@ -15,6 +15,8 @@ const getBooks = asyncHandler(async (req, res) => {
         available,
         minYear,
         maxYear,
+        location,
+        minRating,
         sort = 'newest',
         page = 1,
         limit = 20,
@@ -37,6 +39,11 @@ const getBooks = asyncHandler(async (req, res) => {
     if (format) filters.format = format;
     if (available === 'true') filters.isAvailable = true;
     if (available === 'false') filters.isAvailable = false;
+    
+    if (location) {
+        filters.location = new RegExp(location.trim(), 'i');
+    }
+
     if (minYear || maxYear) {
         filters.publishedYear = {};
         if (minYear) filters.publishedYear.$gte = Number(minYear);
@@ -55,15 +62,27 @@ const getBooks = asyncHandler(async (req, res) => {
 
     const sortOption = sortMap[sort] || sortMap.newest;
 
+    let queryBuilder = Book.find(filters).populate('owner', 'name email averageRating successfulSwaps');
+
+    // If minRating filter is provided, we might need to filter after population if averageRating is on User
+    // However, if we want to filter efficiently, we should have averageRating on the Book too (redundant but fast)
+    // or use aggregation. For now, let's assume we want to filter by the owner's rating.
+
     const total = await Book.countDocuments(filters);
     const books = await Book.find(filters)
-        .populate('owner', 'name email')
+        .populate('owner', 'name email averageRating successfulSwaps')
         .sort(sortOption)
         .skip(pageSize * (pageNum - 1))
         .limit(pageSize);
 
+    // Apply rating filter manually if needed, or if it's on the model
+    let filteredBooks = books;
+    if (minRating) {
+        filteredBooks = books.filter(b => b.owner && b.owner.averageRating >= Number(minRating));
+    }
+
     res.status(200).json({
-        books,
+        books: filteredBooks,
         page: pageNum,
         pages: Math.ceil(total / pageSize),
         total,
@@ -310,11 +329,59 @@ const getMyBooks = asyncHandler(async (req, res) => {
 });
 
 
+// Get recommended books for user
+// GET /api/books/recommendations
+const getRecommendations = asyncHandler(async (req, res) => {
+    const user = await require('../models/User').findById(req.user._id).populate('wishlist');
+    
+    // 1. Get genres from wishlist
+    const wishlistGenres = [...new Set(user.wishlist.map(b => b.genre))];
+    
+    // 2. Get genres from user's books (they like what they have)
+    const myBooks = await Book.find({ owner: req.user._id });
+    const ownedGenres = [...new Set(myBooks.map(b => b.genre))];
+    
+    const preferredGenres = [...new Set([...wishlistGenres, ...ownedGenres])];
+    
+    // 3. Find books with preferred genres that user doesn't own and aren't in wishlist
+    const excludeIds = [
+        req.user._id, 
+        ...user.wishlist.map(b => b._id),
+        ...myBooks.map(b => b._id)
+    ];
+    
+    let recommendations = await Book.find({
+        isAvailable: true,
+        owner: { $ne: req.user._id },
+        _id: { $nin: excludeIds },
+        genre: { $in: preferredGenres }
+    })
+    .populate('owner', 'name')
+    .limit(10);
+    
+    // If not enough recommendations, fill with popular/new books
+    if (recommendations.length < 5) {
+        const extra = await Book.find({
+            isAvailable: true,
+            owner: { $ne: req.user._id },
+            _id: { $nin: [...excludeIds, ...recommendations.map(r => r._id)] }
+        })
+        .populate('owner', 'name')
+        .sort({ averageRating: -1, createdAt: -1 })
+        .limit(10 - recommendations.length);
+        
+        recommendations = [...recommendations, ...extra];
+    }
+
+    res.json(recommendations);
+});
+
 module.exports = {
     getBooks,
     getBookById,
     createBook,
     updateBook,
     deleteBook,
-    getMyBooks, 
+    getMyBooks,
+    getRecommendations,
 };
