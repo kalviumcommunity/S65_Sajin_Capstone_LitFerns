@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, BookOpen, RefreshCw, Users, ArrowRight, Leaf, Star, Shield, Globe, Heart, ChevronRight, BookMarked, ArrowUpRight } from 'lucide-react';
+import { Search, BookOpen, RefreshCw, Users, ArrowRight, Leaf, Star, Shield, Globe, Heart, ChevronRight, BookMarked, ArrowUpRight, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../utils/imageUrl';
 import axios from 'axios';
@@ -115,6 +115,7 @@ const HomePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({ totalBooks: 0, totalUsers: 0, completedSwaps: 0 });
   const [featuredBooks, setFeaturedBooks] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -128,10 +129,15 @@ const HomePage = () => {
         setStats(statsRes.data || {});
         const books = booksRes.data?.books || (Array.isArray(booksRes.data) ? booksRes.data : []);
         setFeaturedBooks(books.slice(0, 8));
+        
+        if (user) {
+          const recRes = await axios.get('/api/books/recommendations').catch(() => ({ data: [] }));
+          setRecommendations(recRes.data || []);
+        }
       } catch { /* silent */ }
     };
     load();
-  }, []);
+  }, [user]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -292,6 +298,55 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+
+      {/* ═══════════════════════════════════════════
+          RECOMMENDATIONS — logged-in
+      ═══════════════════════════════════════════ */}
+      {user && recommendations.length > 0 && (
+        <section className="py-24 sm:py-32 bg-white">
+          <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
+            <div className="flex items-end justify-between mb-12">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles size={16} className="text-amber-500 fill-amber-500/20" />
+                  <p className="text-amber-600 text-xs font-medium tracking-[0.18em] uppercase">Tailored for you</p>
+                </div>
+                <h2 className="font-display text-4xl sm:text-5xl font-bold text-gray-900 leading-tight">
+                  Recommended <span className="italic font-normal text-amber-600">Reads</span>
+                </h2>
+              </div>
+              <Link to="/browse" className="group hidden sm:inline-flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-gray-900 transition-colors">
+                Explore More
+                <ChevronRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
+              {recommendations.slice(0, 5).map((book, i) => (
+                <Link
+                  key={book._id}
+                  to={`/book/${book._id}`}
+                  className="group anim-fade-up"
+                  style={{ animationDelay: `${i * 80}ms` }}
+                >
+                  <div className="relative aspect-[2/3] rounded-xl overflow-hidden shadow-sm group-hover:shadow-xl transition-all duration-500 bg-gray-50 border border-gray-100">
+                    <img
+                      src={getImageUrl(book.image, book.title)}
+                      alt={book.title}
+                      className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700"
+                      onError={(e) => { e.target.src = getImageUrl(null, book.title); }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                      <p className="text-white text-xs font-bold truncate">{book.title}</p>
+                      <p className="text-white/70 text-[10px] truncate">by {book.author}</p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ═══════════════════════════════════════════
           FEATURED BOOKS — logged-in
