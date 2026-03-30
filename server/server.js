@@ -7,6 +7,7 @@ const cors = require('cors');
 const bookRoutes = require('./routes/bookRoutes');
 const userRoutes = require('./routes/userRoutes');
 const swapRoutes = require('./routes/swapRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const { uploadthing } = require('./utils/uploadthing');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
@@ -47,6 +48,7 @@ app.use('/api/uploadthing', uploadthing);
 app.use('/api/books', bookRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/swaps', swapRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
