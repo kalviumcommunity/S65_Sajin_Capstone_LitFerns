@@ -6,6 +6,7 @@ const {
     updateSwapStatus,
     getSwapStats,
     deleteSwap,
+    rateSwap,
 } = require('../controllers/swapController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -20,5 +21,7 @@ router.route('/')
 router.route('/:id')
     .put(protect, updateSwapStatus)
     .delete(protect, deleteSwap);
+
+router.route('/:id/rate').post(protect, rateSwap);
 
 module.exports = router;
