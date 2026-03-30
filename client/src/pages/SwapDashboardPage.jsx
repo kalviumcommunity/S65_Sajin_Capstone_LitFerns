@@ -73,11 +73,12 @@ const StatCard = ({ value, label, icon: Icon, iconBg, iconColor, valueColor }) =
 );
 
 const SwapCard = ({ swap, userId, onAction, onDelete }) => {
-  const isOwner     = swap.owner?._id === userId;
-  const isRequester = swap.requester?._id === userId;
-  const otherParty  = isOwner ? swap.requester : swap.owner;
-  const book        = swap.requestedBook;
-  const offeredBook = swap.offeredBook;
+  const isOwner      = swap.owner?._id === userId;
+  const isRequester  = swap.requester?._id === userId;
+  const otherParty   = isOwner ? swap.requester : swap.owner;
+  const requested    = swap.requestedBooks || [];
+  const offered      = swap.offeredBooks || [];
+  const mainBook     = requested[0];
   const [actionLoading, setActionLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -92,122 +93,156 @@ const SwapCard = ({ swap, userId, onAction, onDelete }) => {
       <div className="flex">
         <div className={`w-0.5 flex-shrink-0 ${accentBar[swap.status] || 'bg-gray-300'}`} />
         <div className="flex-1 p-4 sm:p-5">
-          <div className="flex gap-4">
-            <Link to={`/book/${book?._id}`} className="flex-shrink-0 group/cover">
-              <div className="overflow-hidden rounded-lg bg-gray-50 border border-gray-100 shadow-sm" style={{ width: '3.5rem', height: '4.75rem' }}>
-                <img
-                  src={getImageUrl(book?.image, book?.title || 'Book')}
-                  alt={book?.title}
-                  className="w-full h-full object-contain group-hover/cover:scale-105 transition-transform duration-300"
-                  onError={(e) => { e.target.src = getImageUrl(null, book?.title || 'Book'); }}
-                />
-              </div>
-            </Link>
-
+          <div className="flex flex-col sm:flex-row gap-5">
+            
+            {/* Books Column */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-3 mb-1">
+              <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0">
-                  <Link to={`/book/${book?._id}`} className="font-semibold text-gray-900 hover:text-teal-600 transition-colors text-sm leading-tight block truncate">
-                    {book?.title || 'Unknown Book'}
-                  </Link>
-                  <p className="text-xs text-gray-400 mt-0.5 truncate">{book?.author}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    {isOwner ? (
+                      <span className="inline-flex items-center gap-1 text-amber-600 font-semibold text-[10px] uppercase tracking-wider bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100"><Inbox size={10} /> Incoming Request</span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-blue-600 font-semibold text-[10px] uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100"><Send size={10} /> Sent Request</span>
+                    )}
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {isOwner ? 'from' : 'to'} <span className="font-bold text-gray-700">{otherParty?.name || 'someone'}</span>
+                    </span>
+                  </div>
                 </div>
                 <StatusBadge status={swap.status} />
               </div>
 
-              <div className="mt-2 flex items-center gap-2 text-xs">
-                {isOwner ? (
-                  <span className="inline-flex items-center gap-1 text-amber-600 font-medium"><Inbox size={11} /> Incoming</span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-blue-600 font-medium"><Send size={11} /> Sent</span>
-                )}
-                <span className="text-gray-300">·</span>
-                <span className="text-gray-500">
-                  {isOwner ? 'from' : 'to'} <span className="font-medium text-gray-700">{otherParty?.name || 'someone'}</span>
-                </span>
+              {/* Requested Section */}
+              <div className="space-y-2 mb-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <BookOpen size={10} /> {isOwner ? "They want from you" : "You want from them"}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {requested.map((b) => (
+                    <Link key={b._id} to={`/book/${b._id}`} className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg p-1.5 pr-3 hover:bg-white hover:border-teal-200 transition group/b">
+                      <div className="w-8 h-10 flex-shrink-0 rounded overflow-hidden bg-white border border-gray-100 shadow-sm">
+                        <img 
+                          src={getImageUrl(b.image, b.title)} 
+                          alt={b.title} 
+                          className="w-full h-full object-contain group-hover/b:scale-105 transition-transform"
+                          onError={(e) => { e.target.src = getImageUrl(null, b.title); }}
+                        />
+                      </div>
+                      <div className="min-w-0 max-w-[120px]">
+                        <p className="text-[11px] font-bold text-gray-900 truncate">{b.title}</p>
+                        <p className="text-[10px] text-gray-400 truncate">{b.author}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               </div>
 
-              {offeredBook && (
-                <div className="mt-2.5 inline-flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1.5">
-                  <ArrowLeftRight size={10} className="text-teal-500 flex-shrink-0" />
-                  <span>Offering:</span>
-                  <span className="font-medium text-gray-700 truncate max-w-[140px]">{offeredBook.title}</span>
+              {/* Offered Section */}
+              {offered.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold text-teal-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                    <ArrowLeftRight size={10} /> {isOwner ? "They offer in exchange" : "You offer in exchange"}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {offered.map((b) => (
+                      <div key={b._id} className="flex items-center gap-2 bg-teal-50/30 border border-teal-100/50 rounded-lg p-1.5 pr-3 group/o">
+                        <div className="w-8 h-10 flex-shrink-0 rounded overflow-hidden bg-white border border-teal-50 shadow-sm">
+                          <img 
+                            src={getImageUrl(b.image, b.title)} 
+                            alt={b.title} 
+                            className="w-full h-full object-contain group-hover/o:scale-105 transition-transform"
+                            onError={(e) => { e.target.src = getImageUrl(null, b.title); }}
+                          />
+                        </div>
+                        <div className="min-w-0 max-w-[120px]">
+                          <p className="text-[11px] font-bold text-teal-900 truncate">{b.title}</p>
+                          <p className="text-[10px] text-teal-600/60 truncate">{b.author}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {swap.message && (
-                <p className="mt-2 text-xs text-gray-400 italic leading-relaxed line-clamp-2">"{swap.message}"</p>
+                <div className="mt-4 p-2.5 bg-gray-50/50 rounded-lg border border-dashed border-gray-200">
+                  <p className="text-[11px] text-gray-500 italic leading-relaxed">"{swap.message}"</p>
+                </div>
               )}
 
-              <div className="mt-3">
+              <div className="mt-5">
                 <ProgressBar percent={swap.trackingProgress} />
               </div>
+            </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {isOwner && swap.status === 'Pending' && (
-                  <>
-                    <button onClick={() => handleAction('Accepted')} disabled={actionLoading}
-                      className="px-3.5 py-1.5 text-xs bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                      <CheckCircle size={12} /> Accept
-                    </button>
-                    <button onClick={() => handleAction('Declined')} disabled={actionLoading}
-                      className="px-3.5 py-1.5 text-xs border border-red-200 text-red-500 rounded-lg font-semibold hover:bg-red-50 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                      <XCircle size={12} /> Decline
-                    </button>
-                  </>
-                )}
-                {swap.status === 'Accepted' && (
-                  <button onClick={() => handleAction('Shipped')} disabled={actionLoading}
-                    className="px-3.5 py-1.5 text-xs bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                    <Package size={12} /> Mark Shipped
+            {/* Actions Column */}
+            <div className="sm:w-32 flex flex-col justify-end gap-2 border-t sm:border-t-0 sm:border-l border-gray-100 pt-4 sm:pt-0 sm:pl-5">
+              {isOwner && swap.status === 'Pending' && (
+                <>
+                  <button onClick={() => handleAction('Accepted')} disabled={actionLoading}
+                    className="w-full py-2 text-xs bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
+                    <CheckCircle size={12} /> Accept
                   </button>
-                )}
-                {swap.status === 'Shipped' && (
-                  <button onClick={() => handleAction('In Transit')} disabled={actionLoading}
-                    className="px-3.5 py-1.5 text-xs bg-violet-600 text-white rounded-lg font-semibold hover:bg-violet-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                    <Package size={12} /> Mark In Transit
+                  <button onClick={() => handleAction('Declined')} disabled={actionLoading}
+                    className="w-full py-2 text-xs border border-red-200 text-red-500 rounded-lg font-bold hover:bg-red-50 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
+                    <XCircle size={12} /> Decline
                   </button>
-                )}
-                {swap.status === 'In Transit' && (
-                  <button onClick={() => handleAction('Completed')} disabled={actionLoading}
-                    className="px-3.5 py-1.5 text-xs bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                    <CheckCircle size={12} /> Mark Complete
-                  </button>
-                )}
-                {isRequester && swap.status === 'Pending' && (
-                  <button onClick={() => handleAction('Cancelled')} disabled={actionLoading}
-                    className="px-3.5 py-1.5 text-xs border border-gray-200 text-gray-400 rounded-lg font-semibold hover:bg-gray-50 hover:text-gray-600 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                    <XCircle size={12} /> Cancel
-                  </button>
-                )}
-                {['Accepted', 'Shipped', 'In Transit'].includes(swap.status) && (
-                  <button onClick={() => handleAction('Cancelled')} disabled={actionLoading}
-                    className="px-3.5 py-1.5 text-xs border border-gray-200 text-gray-400 rounded-lg font-semibold hover:bg-gray-50 hover:text-gray-600 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                    <XCircle size={12} /> Cancel
-                  </button>
-                )}
-                {['Completed', 'Declined', 'Cancelled'].includes(swap.status) && onDelete && (
-                  confirmDelete ? (
-                    <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5">
-                      <span className="text-xs text-red-600 font-medium">Remove?</span>
+                </>
+              )}
+              {swap.status === 'Accepted' && (
+                <button onClick={() => handleAction('Shipped')} disabled={actionLoading}
+                  className="w-full py-2 text-xs bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
+                  <Package size={12} /> Ship
+                </button>
+              )}
+              {swap.status === 'Shipped' && (
+                <button onClick={() => handleAction('In Transit')} disabled={actionLoading}
+                  className="w-full py-2 text-xs bg-violet-600 text-white rounded-lg font-bold hover:bg-violet-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
+                  <Package size={12} /> Transit
+                </button>
+              )}
+              {swap.status === 'In Transit' && (
+                <button onClick={() => handleAction('Completed')} disabled={actionLoading}
+                  className="w-full py-2 text-xs bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
+                  <CheckCircle size={12} /> Complete
+                </button>
+              )}
+              {isRequester && swap.status === 'Pending' && (
+                <button onClick={() => handleAction('Cancelled')} disabled={actionLoading}
+                  className="w-full py-2 text-xs border border-gray-200 text-gray-400 rounded-lg font-bold hover:bg-gray-50 hover:text-gray-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
+                  <XCircle size={12} /> Cancel
+                </button>
+              )}
+              {['Accepted', 'Shipped', 'In Transit'].includes(swap.status) && (
+                <button onClick={() => handleAction('Cancelled')} disabled={actionLoading}
+                  className="w-full py-2 text-xs border border-gray-200 text-gray-400 rounded-lg font-bold hover:bg-gray-50 hover:text-gray-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
+                  <XCircle size={12} /> Cancel
+                </button>
+              )}
+              {['Completed', 'Declined', 'Cancelled'].includes(swap.status) && onDelete && (
+                confirmDelete ? (
+                  <div className="flex flex-col gap-1.5 bg-red-50 border border-red-100 rounded-lg p-2">
+                    <span className="text-[10px] text-red-600 font-bold uppercase text-center">Remove?</span>
+                    <div className="flex gap-1.5">
                       <button onClick={async () => { setActionLoading(true); await onDelete(swap._id); setActionLoading(false); }}
                         disabled={actionLoading}
-                        className="px-2.5 py-1 text-xs bg-red-600 text-white rounded-md font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors">
+                        className="flex-1 py-1 text-xs bg-red-600 text-white rounded-md font-bold hover:bg-red-700 disabled:opacity-50 transition-colors">
                         Yes
                       </button>
                       <button onClick={() => setConfirmDelete(false)}
-                        className="px-2.5 py-1 text-xs text-gray-500 rounded-md font-medium hover:bg-gray-100 border border-gray-200 bg-white transition-colors">
+                        className="flex-1 py-1 text-xs text-gray-500 rounded-md font-medium hover:bg-gray-100 border border-gray-200 bg-white transition-colors">
                         No
                       </button>
                     </div>
-                  ) : (
-                    <button onClick={() => setConfirmDelete(true)}
-                      className="px-3.5 py-1.5 text-xs border border-gray-200 text-gray-400 rounded-lg font-semibold hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-colors flex items-center gap-1.5">
-                      <Trash2 size={11} /> Remove
-                    </button>
-                  )
-                )}
-              </div>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDelete(true)}
+                    className="w-full py-2 text-xs border border-gray-200 text-gray-400 rounded-lg font-bold hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center gap-1.5">
+                    <Trash2 size={11} /> Remove
+                  </button>
+                )
+              )}
             </div>
           </div>
         </div>
