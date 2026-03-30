@@ -12,16 +12,19 @@ const swapSchema = mongoose.Schema(
             required: true,
             ref: 'User',
         },
-        requestedBook: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: true,
-            ref: 'Book',
-        },
-        offeredBook: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Book',
-            default: null,
-        },
+        requestedBooks: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                required: true,
+                ref: 'Book',
+            },
+        ],
+        offeredBooks: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Book',
+            },
+        ],
         status: {
             type: String,
             enum: ['Pending', 'Accepted', 'Declined', 'Shipped', 'In Transit', 'Completed', 'Cancelled'],
@@ -38,6 +41,16 @@ const swapSchema = mongoose.Schema(
             min: 0,
             max: 100,
         },
+        requesterRating: {
+            type: Number,
+            min: 1,
+            max: 5,
+        },
+        ownerRating: {
+            type: Number,
+            min: 1,
+            max: 5,
+        },
     },
     {
         timestamps: true,
@@ -45,7 +58,8 @@ const swapSchema = mongoose.Schema(
 );
 
 // Prevent duplicate pending requests for the same book by the same user
-swapSchema.index({ requester: 1, requestedBook: 1, status: 1 });
+// Note: This index may need adjustment if we want to allow multiple pending requests for different combinations
+swapSchema.index({ requester: 1, requestedBooks: 1, status: 1 });
 
 const Swap = mongoose.model('Swap', swapSchema);
 

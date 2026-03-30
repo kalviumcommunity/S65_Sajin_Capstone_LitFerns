@@ -27,6 +27,18 @@ const userSchema = mongoose.Schema(
                 ref: 'Book', 
             },
         ],
+        location: {
+            type: String,
+            default: '',
+        },
+        averageRating: {
+            type: Number,
+            default: 0,
+        },
+        successfulSwaps: {
+            type: Number,
+            default: 0,
+        },
     },
     {
         timestamps: true,
