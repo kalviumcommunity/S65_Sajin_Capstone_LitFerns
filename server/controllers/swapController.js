@@ -1,75 +1,96 @@
 const asyncHandler = require('express-async-handler');
 const Swap = require('../models/Swap');
 const Book = require('../models/Book');
+const Notification = require('../models/Notification');
 
 // @desc    Create a new swap request
 // @route   POST /api/swaps
 // @access  Private
 const createSwapRequest = asyncHandler(async (req, res) => {
-    const { requestedBookId, offeredBookId, message } = req.body;
+    const { requestedBookIds, offeredBookIds, message } = req.body;
 
-    if (!requestedBookId) {
+    if (!requestedBookIds || !Array.isArray(requestedBookIds) || requestedBookIds.length === 0) {
         res.status(400);
-        throw new Error('Requested book ID is required');
+        throw new Error('At least one requested book ID is required');
     }
 
-    const requestedBook = await Book.findById(requestedBookId).populate('owner', 'name');
-    if (!requestedBook) {
+    const requestedBooks = await Book.find({ _id: { $in: requestedBookIds } }).populate('owner', 'name');
+    if (requestedBooks.length !== requestedBookIds.length) {
         res.status(404);
-        throw new Error('Requested book not found');
+        throw new Error('One or more requested books not found');
     }
 
-    if (!requestedBook.isAvailable) {
+    // Check if all requested books belong to the same owner
+    const ownerId = requestedBooks[0].owner._id.toString();
+    const sameOwner = requestedBooks.every((book) => book.owner._id.toString() === ownerId);
+    if (!sameOwner) {
         res.status(400);
-        throw new Error('This book is not available for swap');
+        throw new Error('All requested books must belong to the same owner');
     }
 
-    // Can't swap your own book
-    if (requestedBook.owner._id.toString() === req.user._id.toString()) {
-        res.status(400);
-        throw new Error('You cannot request a swap for your own book');
-    }
+    // Check availability and ownership
+    requestedBooks.forEach((book) => {
+        if (!book.isAvailable) {
+            res.status(400);
+            throw new Error(`Book "${book.title}" is not available for swap`);
+        }
+        if (book.owner._id.toString() === req.user._id.toString()) {
+            res.status(400);
+            throw new Error('You cannot request a swap for your own book');
+        }
+    });
 
-    // Check for existing pending request
+    // Check for existing pending request for any of these books
     const existingRequest = await Swap.findOne({
         requester: req.user._id,
-        requestedBook: requestedBookId,
+        requestedBooks: { $in: requestedBookIds },
         status: { $in: ['Pending', 'Accepted', 'Shipped', 'In Transit'] },
     });
 
     if (existingRequest) {
         res.status(400);
-        throw new Error('You already have an active swap request for this book');
+        throw new Error('You already have an active swap request for one of these books');
     }
 
-    // Validate offered book if provided
-    if (offeredBookId) {
-        const offeredBook = await Book.findById(offeredBookId);
-        if (!offeredBook) {
+    // Validate offered books if provided
+    if (offeredBookIds && Array.isArray(offeredBookIds)) {
+        const offeredBooks = await Book.find({ _id: { $in: offeredBookIds } });
+        if (offeredBooks.length !== offeredBookIds.length) {
             res.status(404);
-            throw new Error('Offered book not found');
+            throw new Error('One or more offered books not found');
         }
-        if (offeredBook.owner.toString() !== req.user._id.toString()) {
-            res.status(403);
-            throw new Error('You can only offer books you own');
-        }
+        offeredBooks.forEach((book) => {
+            if (book.owner.toString() !== req.user._id.toString()) {
+                res.status(403);
+                throw new Error('You can only offer books you own');
+            }
+        });
     }
 
     const swap = await Swap.create({
         requester: req.user._id,
-        owner: requestedBook.owner._id,
-        requestedBook: requestedBookId,
-        offeredBook: offeredBookId || null,
+        owner: ownerId,
+        requestedBooks: requestedBookIds,
+        offeredBooks: offeredBookIds || [],
         message: message?.trim() || '',
         status: 'Pending',
         trackingProgress: 0,
     });
 
+    // Create notification for the owner
+    await Notification.create({
+        user: ownerId,
+        type: 'SwapRequest',
+        content: `${req.user.name} requested a swap for ${requestedBooks[0].title}${requestedBooks.length > 1 ? ` and ${requestedBooks.length - 1} more` : ''}.`,
+        relatedId: swap._id,
+        onModel: 'Swap',
+    });
+
     const populated = await Swap.findById(swap._id)
         .populate('requester', 'name email')
         .populate('owner', 'name email')
-        .populate('requestedBook', 'title author image genre condition')
-        .populate('offeredBook', 'title author image genre condition');
+        .populate('requestedBooks', 'title author image genre condition')
+        .populate('offeredBooks', 'title author image genre condition');
 
     res.status(201).json(populated);
 });
@@ -101,8 +122,8 @@ const getMySwaps = asyncHandler(async (req, res) => {
     const swaps = await Swap.find(filter)
         .populate('requester', 'name email')
         .populate('owner', 'name email')
-        .populate('requestedBook', 'title author image genre condition')
-        .populate('offeredBook', 'title author image genre condition')
+        .populate('requestedBooks', 'title author image genre condition')
+        .populate('offeredBooks', 'title author image genre condition')
         .sort({ updatedAt: -1 });
 
     res.json(swaps);
@@ -161,12 +182,16 @@ const updateSwapStatus = asyncHandler(async (req, res) => {
     swap.status = status;
     swap.trackingProgress = progressMap[status] ?? swap.trackingProgress;
 
-    // If completed, mark the book as unavailable
+    // If completed, mark the books as unavailable and update user stats
     if (status === 'Completed') {
-        await Book.findByIdAndUpdate(swap.requestedBook, { isAvailable: false });
-        if (swap.offeredBook) {
-            await Book.findByIdAndUpdate(swap.offeredBook, { isAvailable: false });
+        await Book.updateMany({ _id: { $in: swap.requestedBooks } }, { isAvailable: false });
+        if (swap.offeredBooks && swap.offeredBooks.length > 0) {
+            await Book.updateMany({ _id: { $in: swap.offeredBooks } }, { isAvailable: false });
         }
+        // Update successful swap counts for both users
+        const User = require('../models/User');
+        await User.findByIdAndUpdate(swap.requester, { $inc: { successfulSwaps: 1 } });
+        await User.findByIdAndUpdate(swap.owner, { $inc: { successfulSwaps: 1 } });
     }
 
     // If cancelled or declined, ensure no side effects
@@ -176,11 +201,35 @@ const updateSwapStatus = asyncHandler(async (req, res) => {
 
     await swap.save();
 
+    // Create notification for the other party
+    const notificationUser = isOwner ? swap.requester : swap.owner;
+    let notificationType = 'SwapRequest';
+    let content = `Swap status updated to ${status}`;
+
+    if (status === 'Accepted') notificationType = 'SwapAccepted';
+    if (status === 'Declined') notificationType = 'SwapDeclined';
+    if (status === 'Shipped') notificationType = 'SwapShipped';
+    if (status === 'Completed') notificationType = 'SwapCompleted';
+
+    if (status === 'Accepted') content = `${req.user.name} accepted your swap request!`;
+    if (status === 'Declined') content = `${req.user.name} declined your swap request.`;
+    if (status === 'Shipped') content = `${req.user.name} marked the books as shipped.`;
+    if (status === 'Completed') content = `Your swap with ${req.user.name} is complete!`;
+    if (status === 'Cancelled') content = `${req.user.name} cancelled the swap request.`;
+
+    await Notification.create({
+        user: notificationUser,
+        type: notificationType,
+        content,
+        relatedId: swap._id,
+        onModel: 'Swap',
+    });
+
     const updated = await Swap.findById(swap._id)
         .populate('requester', 'name email')
         .populate('owner', 'name email')
-        .populate('requestedBook', 'title author image genre condition')
-        .populate('offeredBook', 'title author image genre condition');
+        .populate('requestedBooks', 'title author image genre condition')
+        .populate('offeredBooks', 'title author image genre condition');
 
     res.json(updated);
 });
@@ -200,6 +249,75 @@ const getSwapStats = asyncHandler(async (req, res) => {
         totalUsers,
         completedSwaps,
     });
+});
+
+// @desc    Rate a completed swap
+// @route   POST /api/swaps/:id/rate
+// @access  Private
+const rateSwap = asyncHandler(async (req, res) => {
+    const { rating } = req.body;
+    const swap = await Swap.findById(req.params.id);
+
+    if (!swap) {
+        res.status(404);
+        throw new Error('Swap not found');
+    }
+
+    if (swap.status !== 'Completed') {
+        res.status(400);
+        throw new Error('Can only rate completed swaps');
+    }
+
+    const userId = req.user._id.toString();
+    const isRequester = swap.requester.toString() === userId;
+    const isOwner = swap.owner.toString() === userId;
+
+    if (!isRequester && !isOwner) {
+        res.status(403);
+        throw new Error('Not authorized to rate this swap');
+    }
+
+    let userToRate;
+    if (isRequester) {
+        if (swap.ownerRating) {
+            res.status(400);
+            throw new Error('You have already rated this swap');
+        }
+        swap.ownerRating = rating;
+        userToRate = await require('../models/User').findById(swap.owner);
+    } else { // isOwner
+        if (swap.requesterRating) {
+            res.status(400);
+            throw new Error('You have already rated this swap');
+        }
+        swap.requesterRating = rating;
+        userToRate = await require('../models/User').findById(swap.requester);
+    }
+
+    // Recalculate average rating
+    const allRatedSwaps = await Swap.find({
+        $or: [{ owner: userToRate._id }, { requester: userToRate._id }],
+        status: 'Completed',
+        $or: [{ ownerRating: { $exists: true } }, { requesterRating: { $exists: true } }],
+    });
+
+    const totalRatings = allRatedSwaps.reduce((acc, currentSwap) => {
+        if (currentSwap.owner.toString() === userToRate._id.toString() && currentSwap.requesterRating) {
+            return acc + currentSwap.requesterRating;
+        }
+        if (currentSwap.requester.toString() === userToRate._id.toString() && currentSwap.ownerRating) {
+            return acc + currentSwap.ownerRating;
+        }
+        return acc;
+    }, 0);
+
+    const numRatings = allRatedSwaps.length;
+    userToRate.averageRating = numRatings > 0 ? (totalRatings / numRatings).toFixed(1) : rating;
+
+    await userToRate.save();
+    await swap.save();
+
+    res.status(200).json({ message: 'Swap rated successfully' });
 });
 
 // @desc    Delete/cancel a swap request
@@ -228,5 +346,6 @@ module.exports = {
     getMySwaps,
     updateSwapStatus,
     getSwapStats,
+    rateSwap,
     deleteSwap,
 };
