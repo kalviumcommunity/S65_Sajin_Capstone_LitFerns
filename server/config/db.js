@@ -2,11 +2,15 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
     try {
-        const conn = await mongoose.connect(process.env.MONGO_URI, {
-            // SSL/TLS Configuration
-            ssl: true,
-            retryWrites: true,
-            w: 'majority',
+        const mongoUri = process.env.MONGO_URI;
+        if (!mongoUri) {
+            throw new Error('MONGO_URI is not set');
+        }
+
+        const isSrv = mongoUri.startsWith('mongodb+srv://');
+
+        const conn = await mongoose.connect(mongoUri, {
+            ...(isSrv ? { retryWrites: true, w: 'majority' } : {}),
             // Connection pooling
             maxPoolSize: 10,
             minPoolSize: 2,
