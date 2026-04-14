@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Leaf, Menu, X, LogOut, BookOpen, RefreshCw, User, ChevronDown, Bell, CheckCheck } from 'lucide-react';
+import { Leaf, Menu, X, LogOut, BookOpen, RefreshCw, User, ChevronDown, Bell, CheckCheck, MessageSquare, Settings, Users, HelpCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
@@ -145,9 +145,16 @@ const Header = () => {
 
     const navLinks = user ? [
         { to: '/browse',    label: 'Library',  icon: BookOpen },
+        { to: '/discover',  label: 'Discover', icon: Users },
+        { to: '/messages',  label: 'Messages', icon: MessageSquare },
         { to: '/profile',   label: 'My Books', icon: User },
         { to: '/dashboard', label: 'Swaps',    icon: RefreshCw },
     ] : [];
+
+    const settingsLinks = [
+        { to: '/settings', label: 'Settings', icon: Settings },
+        { to: '/help', label: 'Help', icon: HelpCircle },
+    ];
 
     const isActive = (path) => location.pathname === path;
 
@@ -310,6 +317,12 @@ const Header = () => {
                                                     </Link>
                                                     <Link to="/dashboard" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
                                                         <RefreshCw size={14} className="text-gray-400" /> Swap Dashboard
+                                                    </Link>
+                                                    <Link to="/settings" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+                                                        <Settings size={14} className="text-gray-400" /> Settings
+                                                    </Link>
+                                                    <Link to="/help" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+                                                        <HelpCircle size={14} className="text-gray-400" /> Help
                                                     </Link>
                                                 </div>
                                                 <div className="border-t border-gray-100 py-1.5">
