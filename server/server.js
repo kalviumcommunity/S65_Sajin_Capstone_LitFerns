@@ -12,6 +12,9 @@ const userRoutes = require('./routes/userRoutes');
 const swapRoutes = require('./routes/swapRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
+const messageRoutes = require('./routes/messageRoutes');
+const followRoutes = require('./routes/followRoutes');
 const { uploadthing } = require('./utils/uploadthing');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
@@ -71,6 +74,9 @@ app.use('/api/books', bookRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/swaps', swapRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/follow', followRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

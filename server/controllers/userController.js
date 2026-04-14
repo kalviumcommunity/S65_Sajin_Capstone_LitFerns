@@ -301,8 +301,126 @@ const removeFromWishlist = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Get user settings
+// @route   GET /api/users/settings
+// @access  Private
+const getUserSettings = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id);
 
+    if (user) {
+        res.json({
+            preferences: user.preferences,
+            bio: user.bio,
+            avatar: user.avatar,
+            location: user.location,
+        });
+    } else {
+        res.status(404);
+        throw new Error('User not found');
+    }
+});
 
+// @desc    Update user settings
+// @route   PUT /api/users/settings
+// @access  Private
+const updateUserSettings = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+        res.status(404);
+        throw new Error('User not found');
+    }
+
+    // Update bio
+    if (req.body.bio !== undefined) {
+        if (req.body.bio.length > 500) {
+            res.status(400);
+            throw new Error('Bio must be 500 characters or less');
+        }
+        user.bio = req.body.bio.trim();
+    }
+
+    // Update avatar URL
+    if (req.body.avatar !== undefined) {
+        user.avatar = req.body.avatar;
+    }
+
+    // Update location
+    if (req.body.location !== undefined) {
+        user.location = req.body.location.trim();
+    }
+
+    // Update preferences
+    if (req.body.preferences) {
+        const prefs = req.body.preferences;
+        if (prefs.emailNotifications !== undefined) {
+            user.preferences.emailNotifications = prefs.emailNotifications;
+        }
+        if (prefs.swapNotifications !== undefined) {
+            user.preferences.swapNotifications = prefs.swapNotifications;
+        }
+        if (prefs.messageNotifications !== undefined) {
+            user.preferences.messageNotifications = prefs.messageNotifications;
+        }
+        if (prefs.favoriteGenres && Array.isArray(prefs.favoriteGenres)) {
+            user.preferences.favoriteGenres = prefs.favoriteGenres;
+        }
+        if (prefs.preferredFormats && Array.isArray(prefs.preferredFormats)) {
+            user.preferences.preferredFormats = prefs.preferredFormats;
+        }
+    }
+
+    const updated = await user.save();
+
+    res.json({
+        preferences: updated.preferences,
+        bio: updated.bio,
+        avatar: updated.avatar,
+        location: updated.location,
+    });
+});
+
+// @desc    Get user summary (for dashboard)
+// @route   GET /api/users/summary
+// @access  Private
+const getUserSummary = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id);
+    const Book = require('../models/Book');
+    const Swap = require('../models/Swap');
+    const Review = require('../models/Review');
+
+    if (!user) {
+        res.status(404);
+        throw new Error('User not found');
+    }
+
+    const [myBooksCount, totalSwaps, completedSwaps, reviewsCount] = await Promise.all([
+        Book.countDocuments({ owner: req.user._id }),
+        Swap.countDocuments({
+            $or: [{ requester: req.user._id }, { owner: req.user._id }],
+        }),
+        Swap.countDocuments({
+            $or: [{ requester: req.user._id }, { owner: req.user._id }],
+            status: 'Completed',
+        }),
+        Review.countDocuments({ user: req.user._id }),
+    ]);
+
+    res.json({
+        name: user.name,
+        email: user.email,
+        location: user.location,
+        bio: user.bio,
+        avatar: user.avatar,
+        averageRating: user.averageRating,
+        successfulSwaps: user.successfulSwaps,
+        myBooksCount,
+        totalSwaps,
+        completedSwaps,
+        reviewsCount,
+        memberSince: user.createdAt,
+    });
+});
 
 module.exports = {
     authUser,
@@ -316,4 +434,7 @@ module.exports = {
     logoutUser,
     addToWishlist,
     removeFromWishlist,
+    getUserSettings,
+    updateUserSettings,
+    getUserSummary,
 };

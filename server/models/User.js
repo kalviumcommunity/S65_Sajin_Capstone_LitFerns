@@ -31,6 +31,15 @@ const userSchema = mongoose.Schema(
             type: String,
             default: '',
         },
+        bio: {
+            type: String,
+            default: '',
+            maxlength: 500,
+        },
+        avatar: {
+            type: String,
+            default: '',
+        },
         averageRating: {
             type: Number,
             default: 0,
@@ -38,6 +47,22 @@ const userSchema = mongoose.Schema(
         successfulSwaps: {
             type: Number,
             default: 0,
+        },
+        preferences: {
+            emailNotifications: {
+                type: Boolean,
+                default: true,
+            },
+            swapNotifications: {
+                type: Boolean,
+                default: true,
+            },
+            messageNotifications: {
+                type: Boolean,
+                default: true,
+            },
+            favoriteGenres: [String],
+            preferredFormats: [String],
         },
     },
     {
