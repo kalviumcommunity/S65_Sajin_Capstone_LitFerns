@@ -255,7 +255,12 @@ const getSwapStats = asyncHandler(async (req, res) => {
 // @route   POST /api/swaps/:id/rate
 // @access  Private
 const rateSwap = asyncHandler(async (req, res) => {
-    const { rating } = req.body;
+    const parsedRating = Number(req.body?.rating);
+    if (!Number.isFinite(parsedRating) || parsedRating < 1 || parsedRating > 5) {
+        res.status(400);
+        throw new Error('Rating must be a number between 1 and 5');
+    }
+
     const swap = await Swap.findById(req.params.id);
 
     if (!swap) {
@@ -283,36 +288,46 @@ const rateSwap = asyncHandler(async (req, res) => {
             res.status(400);
             throw new Error('You have already rated this swap');
         }
-        swap.ownerRating = rating;
+        swap.ownerRating = parsedRating;
         userToRate = await require('../models/User').findById(swap.owner);
     } else { // isOwner
         if (swap.requesterRating) {
             res.status(400);
             throw new Error('You have already rated this swap');
         }
-        swap.requesterRating = rating;
+        swap.requesterRating = parsedRating;
         userToRate = await require('../models/User').findById(swap.requester);
+    }
+
+    if (!userToRate) {
+        res.status(404);
+        throw new Error('User to rate was not found');
     }
 
     // Recalculate average rating
     const allRatedSwaps = await Swap.find({
-        $or: [{ owner: userToRate._id }, { requester: userToRate._id }],
         status: 'Completed',
-        $or: [{ ownerRating: { $exists: true } }, { requesterRating: { $exists: true } }],
+        $and: [
+            { $or: [{ owner: userToRate._id }, { requester: userToRate._id }] },
+            { $or: [{ ownerRating: { $ne: null } }, { requesterRating: { $ne: null } }] },
+        ],
     });
 
-    const totalRatings = allRatedSwaps.reduce((acc, currentSwap) => {
+    const ratingAccumulator = allRatedSwaps.reduce((acc, currentSwap) => {
         if (currentSwap.owner.toString() === userToRate._id.toString() && currentSwap.requesterRating) {
-            return acc + currentSwap.requesterRating;
+            acc.total += currentSwap.requesterRating;
+            acc.count += 1;
         }
         if (currentSwap.requester.toString() === userToRate._id.toString() && currentSwap.ownerRating) {
-            return acc + currentSwap.ownerRating;
+            acc.total += currentSwap.ownerRating;
+            acc.count += 1;
         }
         return acc;
-    }, 0);
+    }, { total: 0, count: 0 });
 
-    const numRatings = allRatedSwaps.length;
-    userToRate.averageRating = numRatings > 0 ? (totalRatings / numRatings).toFixed(1) : rating;
+    userToRate.averageRating = ratingAccumulator.count > 0
+        ? Number((ratingAccumulator.total / ratingAccumulator.count).toFixed(1))
+        : parsedRating;
 
     await userToRate.save();
     await swap.save();
