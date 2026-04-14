@@ -1,6 +1,9 @@
-require('dotenv').config();
+const dotenv = require('dotenv');
+dotenv.config();
 
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const connectDB = require('./config/db');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
@@ -8,10 +11,22 @@ const bookRoutes = require('./routes/bookRoutes');
 const userRoutes = require('./routes/userRoutes');
 const swapRoutes = require('./routes/swapRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 const { uploadthing } = require('./utils/uploadthing');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 const app = express();
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+const validateRequiredEnv = () => {
+    const required = ['MONGO_URI', 'JWT_SECRET'];
+    const missing = required.filter((key) => !process.env[key]);
+
+    if (missing.length > 0) {
+        throw new Error(`Missing required environment variable(s): ${missing.join(', ')}`);
+    }
+};
 
 // CORS configuration for local and production
 const allowedOrigins = [
@@ -38,12 +53,19 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
+
 app.get('/', (req, res) => {
     res.send('LitFerns API is running...');
 });
 
 // Mount UploadThing handler at /api/uploadthing
 app.use('/api/uploadthing', uploadthing);
+app.use('/api/uploads', uploadRoutes);
 
 app.use('/api/books', bookRoutes);
 app.use('/api/users', userRoutes);
@@ -58,6 +80,7 @@ const PORT = process.env.PORT || 5000;
 // Creating a function to start the server
 const startServer = async () => {
     try {
+        validateRequiredEnv();
         await connectDB();
         
         app.listen(PORT, () => {
